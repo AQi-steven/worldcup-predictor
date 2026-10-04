@@ -1,0 +1,3251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <!-- 微信浏览器防缓存：版本戳+localStorage自愈，强制拉最新 -->
+    <script>
+    var APP_VER = '20260720h';
+    (function(){
+        try {
+            var saved = localStorage.getItem('wc_app_ver');
+            if (saved !== APP_VER) {
+                localStorage.setItem('wc_app_ver', APP_VER);
+                // 关键：用【不同文件名】强制微信X5放弃磁盘缓存。
+                // 同path不同query的replace在X5下会被复用缓存，必须用新文件名才能拉到最新版。
+                location.replace('./app_' + APP_VER + '.html');
+                return;
+            }
+        } catch(e){}
+    })();
+    </script>
+    <title>2026世界杯竞猜 v15.0</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #333; }
+
+        /* 登录界面 */
+        #login-screen { display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #1a2f5e 0%, #2a5298 60%, #1976d2 100%); }
+        .login-box { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.25); text-align: center; width: 90%; max-width: 380px; }
+        .login-logo { font-size: 50px; margin-bottom: 12px; }
+        .login-box h1 { color: #1a2f5e; margin-bottom: 6px; font-size: 22px; font-weight: 700; }
+        .login-box p { color: #888; margin-bottom: 28px; font-size: 13px; }
+        .login-box input { width: 100%; padding: 13px 14px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px; margin-bottom: 16px; transition: border-color .2s; outline: none; }
+        .login-box input:focus { border-color: #1e3c72; }
+        .login-box button { width: 100%; padding: 13px; background: linear-gradient(135deg, #1a2f5e, #2a5298); color: white; border: none; border-radius: 10px; font-size: 16px; cursor: pointer; font-weight: 600; letter-spacing: 1px; }
+        .login-tip { font-size: 11px; color: #bbb; margin-top: 16px; line-height: 1.7; }
+
+        /* 主界面 */
+        #main-app { display: none; max-width: 700px; margin: 0 auto; }
+
+        /* 顶栏 */
+        .header { background: linear-gradient(135deg, #1a2f5e 0%, #2a5298 100%); color: white; position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 700px; z-index: 200; box-shadow: 0 2px 12px rgba(0,0,0,0.12); }
+        .header-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px 10px 20px; }
+        .header-sync { display: flex; justify-content: space-between; align-items: center; padding: 7px 16px 9px 16px; font-size: 12px; color: rgba(255,255,255,0.82); border-top: 1px solid rgba(255,255,255,0.15); }
+        .header-sync .btn-refresh { padding: 4px 12px; background: rgba(255,255,255,0.18); color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; }
+        .header-sync .dot { margin-right: 5px; }
+        .header-left h1 { font-size: 17px; font-weight: 700; }
+        .header-left p { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+        .header-right { display: flex; align-items: center; gap: 8px; }
+        .avatar { width: 32px; height: 32px; background: rgba(255,255,255,0.25); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+
+        /* 同步状态条 */
+        /* .sync-bar 已并入 .header 作为 .header-sync（见上方） */
+        .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: middle; }
+        .dot-g { background: #4caf50; }
+        .dot-y { background: #ff9800; animation: blink .7s infinite; }
+        .dot-r { background: #f44336; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+        /* 底部标签页 */
+        .tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 700px; display: flex; background: white; border-top: 1px solid #eee; z-index: 100; box-shadow: 0 -2px 12px rgba(0,0,0,0.07); }
+        .tab { flex: 1; padding: 10px 0 8px 0; text-align: center; cursor: pointer; font-size: 11px; color: #aaa; border-top: 2px solid transparent; transition: all .15s; }
+        .tab .tab-icon { font-size: 22px; display: block; margin-bottom: 2px; }
+        .tab.active { color: #1e3c72; border-top-color: #1e3c72; }
+
+        /* 内容区 */
+        .content { display: none; padding: 14px 14px 0 14px; }
+        .content.active { display: block; }
+        /* 中部内容缩放层：仅此层随双指缩放，顶/底栏在层外不缩放 */
+        #content-layer { position: fixed; top: var(--hh, 96px); bottom: var(--th, 56px); left: 50%; transform: translateX(-50%); width: 100%; max-width: 700px; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; background: #f0f2f5; }
+        #zoom-inner { transform-origin: 0 0; }
+
+        /* 分区标题 */
+        .section-title { font-size: 13px; font-weight: 600; color: #555; margin: 18px 0 8px 0; padding: 6px 10px; background: #eef0f5; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .section-title:first-child { margin-top: 0; }
+        .section-count { font-size: 12px; color: #aaa; font-weight: 400; }
+
+        /* 比赛卡片 */
+        .match-card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 6px rgba(0,0,0,0.07); }
+        .match-time-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .match-time-text { color: #aaa; font-size: 12px; }
+        .bj-time { color: #1e3c72; font-weight: 600; font-size: 13px; }
+
+        /* 球队展示 */
+        .teams-row { display: flex; justify-content: space-between; align-items: center; }
+        .team { text-align: center; flex: 1; }
+        .team-flag { height: 28px; display: block; margin: 0 auto 4px; }
+        .team-name { font-weight: 600; font-size: 14px; color: #222; }
+        .team-name-cn { font-size: 12px; color: #888; margin-top: 1px; }
+        .vs-badge { padding: 4px 10px; background: #f5f5f5; border-radius: 6px; font-size: 12px; color: #bbb; font-weight: 600; }
+
+        /* 状态徽章 */
+        .status-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+        .status-upcoming { background: #e3f2fd; color: #1565c0; }
+        .status-finished { background: #e8f5e9; color: #2e7d32; }
+        .status-locked { background: #fff3e0; color: #ef6c00; }
+        .status-future { background: #f5f5f5; color: #aaa; }
+        .status-live { background: #ffebee; color: #d32f2f; font-weight: 600; }
+
+        /* 预测输入区 */
+        .pred-input-area { margin-top: 14px; padding-top: 14px; border-top: 1px solid #f5f5f5; }
+        .pred-row { display: flex; justify-content: center; align-items: center; gap: 10px; }
+        .pred-row input { width: 56px; height: 52px; padding: 4px; text-align: center; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 22px; font-weight: 700; color: #1e3c72; outline: none; transition: border-color .2s; -moz-appearance: textfield; }
+        .pred-row input::-webkit-outer-spin-button,
+        .pred-row input::-webkit-inner-spin-button { -webkit-appearance: none; }
+        .pred-row input:focus { border-color: #1e3c72; }
+        .colon-div { font-size: 24px; color: #ccc; }
+        .btn-submit { padding: 12px 20px; background: #1e3c72; color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; }
+        .btn-submit:hover { background: #2a5298; }
+        .btn-submit:active { transform: scale(0.97); }
+
+        /* X因素附加题选项（可跳过 / 可再点取消） */
+        .xf-opt { flex:1; text-align:center; padding:8px 4px; border:1px solid #ddd; border-radius:6px; font-size:13px; cursor:pointer; background:#fafafa; user-select:none; transition:all .12s; }
+        .xf-opt:active { transform: scale(0.97); }
+        .xf-opt-sel { background:#fff3e0 !important; border-color:#ffb74d !important; color:#e65100 !important; font-weight:600; }
+
+        /* 已预测信息 */
+        .my-pred-info { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px; background: #f8f9fb; border-radius: 9px; }
+        .pred-score-show { font-size: 14px; color: #333; }
+        .pred-score-show strong { color: #1e3c72; font-size: 16px; }
+        .modify-hint { font-size: 11px; color: #bbb; margin-top: 4px; }
+        .modify-hint.warn { color: #f57c00; }
+
+        /* 已结束比赛比分 */
+        .result-score-row { display: flex; justify-content: space-between; align-items: center; margin: 12px 0; padding: 12px 14px; background: #f5f7fc; border-radius: 10px; }
+        .r-team { text-align: center; flex: 1; }
+        .r-flag { height: 24px; display: block; margin: 0 auto 2px; }
+        .r-name { font-size: 13px; color: #555; font-weight: 500; }
+        .r-name-cn { font-size: 11px; color: #aaa; }
+        .r-scorebox { display: flex; align-items: center; gap: 8px; }
+        .r-num { font-size: 36px; font-weight: 800; color: #1a2f5e; line-height: 1; min-width: 32px; text-align: center; }
+        .r-div { font-size: 22px; color: #ccc; }
+
+        /* 我的预测结果 */
+        .my-result-row { padding: 9px 14px; background: #f9fafb; border-radius: 8px; margin-top: 8px; }
+        .my-pred-text { font-size: 13px; color: #666; }
+        .my-pred-text strong { color: #333; }
+        .my-pred-badges { margin-top: 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+        .pts-badge { padding: 4px 13px; border-radius: 20px; font-size: 13px; font-weight: 700; }
+        .pts-5 { background: #e8f5e9; color: #2e7d32; }
+        .pts-4 { background: #e3f2fd; color: #1565c0; }
+        .pts-3 { background: #fff3e0; color: #ef6c00; }
+        .pts-1 { background: #f5f5f5; color: #9e9e9e; }
+.pts-plain { background: transparent !important; color: #333 !important; padding: 0 2px !important; border-radius: 0 !important; font-weight: 700; }
+        .pts-pending { background: #f5f5f5; color: #ccc; font-size: 12px; font-weight: 400; }
+        .pts-noentry { color: #ddd; font-size: 13px; }
+
+        /* 完美比分高亮 */
+        .pts-perfect {
+            background: linear-gradient(135deg, #ffd700, #ff9d00) !important;
+            color: #5a3b00 !important;
+            border: 1px solid #ffb300 !important;
+            box-shadow: 0 0 0 2px rgba(255,193,7,0.22), 0 2px 8px rgba(255,160,0,0.40) !important;
+            animation: perfectGlow 1.6s ease-in-out infinite;
+        }
+        @keyframes perfectGlow {
+            0%, 100% { box-shadow: 0 0 0 2px rgba(255,193,7,0.20), 0 2px 8px rgba(255,160,0,0.35) !important; }
+            50%      { box-shadow: 0 0 0 4px rgba(255,193,7,0.38), 0 2px 12px rgba(255,160,0,0.58) !important; }
+        }
+        .pts-perfect-txt { font-weight: 700; }
+        .pri-pts.pts-perfect { padding: 2px 8px; border-radius: 14px; }
+
+        /* 全员预测折叠 */
+        .all-preds-btn { font-size: 12px; color: #1565c0; cursor: pointer; margin-top: 10px; padding-top: 9px; border-top: 1px dashed #eee; text-align: center; user-select: none; }
+        .all-preds-list { display: none; margin-top: 8px; }
+        .all-preds-list.open { display: block; }
+        .pred-row-item { display: flex; justify-content: space-between; align-items: center; padding: 5px 2px; font-size: 13px; border-bottom: 1px solid #f5f5f5; }
+        .pred-row-item:last-child { border-bottom: none; }
+        .pri-name { color: #555; min-width: 60px; }
+        .pri-score { font-weight: 500; color: #333; }
+        .pri-pts { font-weight: 700; min-width: 36px; text-align: right; }
+
+        /* 历史赛果折叠按钮 */
+        .history-toggle-btn { text-align: center; padding: 11px; background: white; border-radius: 10px; margin-bottom: 12px; font-size: 13px; color: #1565c0; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.07); user-select: none; }
+
+        /* 未来赛程 */
+        .match-card.future { opacity: 0.68; }
+        .future-note { text-align: center; font-size: 12px; color: #bbb; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #f0f0f0; }
+
+        /* 我的预测页 */
+        .my-pred-card { background: white; border-radius: 11px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.07); display: flex; justify-content: space-between; align-items: center; }
+        .mpc-left { flex: 1; }
+        .mpc-matchname { font-weight: 600; font-size: 14px; margin-bottom: 3px; }
+        .mpc-time { font-size: 11px; color: #bbb; margin-bottom: 5px; }
+        .mpc-pred { font-size: 13px; color: #555; }
+        .mpc-pred strong { color: #1e3c72; font-size: 15px; }
+        .mpc-actual { font-size: 12px; color: #888; margin-top: 2px; }
+
+        /* 排行榜 */
+        .lb-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.09); margin-bottom: 20px; }
+        .lb-header { background: linear-gradient(135deg, #1a2f5e, #2a5298); color: white; padding: 16px 18px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+        .lb-header span { opacity: 0.7; font-size: 12px; }
+        .rank-row { display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid #f5f5f5; transition: background .1s; }
+        .rank-row:last-child { border-bottom: none; }
+        .rank-row.me { background: #f0f5ff; }
+        .rank-num { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+        .rn-1 { background: linear-gradient(135deg, #ffd700, #ffb300); color: white; box-shadow: 0 2px 6px rgba(255,193,7,0.4); }
+        .rn-2 { background: linear-gradient(135deg, #bdbdbd, #9e9e9e); color: white; }
+        .rn-3 { background: linear-gradient(135deg, #cd7f32, #a0522d); color: white; }
+        .rn-o { background: #f0f0f0; color: #aaa; }
+        .rank-info { flex: 1; margin-left: 12px; }
+        .rank-name { font-size: 14px; font-weight: 600; }
+        .rank-sub { font-size: 11px; color: #aaa; margin-top: 2px; }
+        .day-crown { font-size: 12px; color: #f59e0b; margin-left: 4px; }
+        .day-last { font-size: 12px; color: #000; margin-left: 4px; }
+        .pred-anonymous { margin-top: 6px; padding: 8px 10px; background: #f8f9fa; border-radius: 10px; font-size: 12px; }
+        .pred-names { margin-bottom: 4px; color: #333; line-height: 1.8; }
+        .pred-distribution { color: #1565c0; font-weight: 600; font-size: 12px; }
+        .peek-btn { display: block; width: 100%; margin-top: 8px; padding: 8px; border: none; border-radius: 10px; background: linear-gradient(135deg,#1a2f5e,#2a5298); color: #ffe9b0; font-size: 12.5px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(26,47,94,.25); transition: transform .1s, box-shadow .1s; }
+        .peek-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,47,94,.35); }
+        .peek-btn:active { transform: translateY(0); }
+        .peek-btn:disabled { background: #ccc; color: #fff; cursor: not-allowed; box-shadow: none; }
+        .peek-tip { margin: 6px 0 4px; font-size: 11.5px; font-weight: 600; color: #b8860b; background: linear-gradient(135deg,#fff8e1,#fff3c4); border: 1px solid #f0c419; border-radius: 8px; padding: 4px 10px; }
+        .peek-cost-hint { margin-top: 8px; font-size: 11px; color: #1a2f5e; text-align: center; opacity: .85; }
+        .peek-revealed { margin-top: 4px; border-radius: 8px; overflow: hidden; }
+        .peek-deduct { margin-top: 3px; font-size: 11px; font-weight: 600; color: #b8860b; text-align: right; }
+        .rank-today { font-size: 13px; font-weight: 700; color: #27ae60; background: #f0fff4; border-radius: 8px; padding: 4px 10px; margin-right: 10px; min-width: 40px; text-align: center; white-space: nowrap; }
+        .rank-pts { font-size: 22px; font-weight: 800; color: #1a2f5e; }
+        .rank-pts.gold { color: #d4af37; }
+        .rank-toggle { display: inline-flex; background: rgba(255,255,255,0.12); border-radius: 20px; padding: 2px; }
+        .rank-toggle button { padding: 4px 12px; border: none; border-radius: 18px; font-size: 11px; font-weight: 600; cursor: pointer; background: transparent; color: rgba(255,255,255,0.55); transition: all .2s; }
+        .rank-toggle button.active { background: white; color: #1a2f5e; }
+
+        /* 积分规则页 */
+        .rules-card { background: white; border-radius: 12px; padding: 18px; margin-bottom: 14px; box-shadow: 0 1px 6px rgba(0,0,0,0.07); }
+        .rules-card h3 { font-size: 15px; font-weight: 700; color: #1a2f5e; margin-bottom: 14px; }
+        .rule-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid #f5f5f5; }
+        .rule-row:last-child { border-bottom: none; }
+        .rule-pts-badge { padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 15px; }
+        .rpb-5 { background: #e8f5e9; color: #2e7d32; }
+        .rpb-4 { background: #e3f2fd; color: #1565c0; }
+        .rpb-3 { background: #fff3e0; color: #ef6c00; }
+        .rpb-1 { background: #f5f5f5; color: #9e9e9e; }
+
+        /* 空状态 */
+        .empty-state { text-align: center; padding: 50px 20px; color: #ccc; }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-state p { font-size: 14px; }
+
+        /* Toast提示 */
+        #toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px); background: rgba(30,60,114,0.92); color: white; padding: 10px 22px; border-radius: 25px; font-size: 14px; opacity: 0; transition: all .25s; z-index: 999; pointer-events: none; white-space: nowrap; }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* 留言区样式 */
+        .comment-toggle { display: inline-block; font-size: 13px; color: white; background: #1e3c72; cursor: pointer; margin-top: 10px; padding: 6px 16px; border-radius: 20px; text-align: center; user-select: none; font-weight: 500; }
+        .comment-section { display: none; margin-top: 8px; }
+        .comment-section.open { display: block; }
+        .comment-list { max-height: 200px; overflow-y: auto; }
+        .comment-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 6px 2px; font-size: 13px; border-bottom: 1px solid #f5f5f5; }
+        .comment-item:last-child { border-bottom: none; }
+        .comment-name { font-weight: 600; color: #1e3c72; min-width: 48px; margin-right: 6px; white-space: nowrap; }
+        .comment-text { flex: 1; color: #444; word-break: break-all; }
+        .comment-time { font-size: 11px; color: #ccc; margin-left: 6px; white-space: nowrap; }
+        .comment-input-row { display: flex; gap: 6px; margin-top: 8px; }
+        .comment-input-row input { flex: 1; padding: 8px 10px; border: 1.5px solid #e0e0e0; border-radius: 8px; font-size: 13px; outline: none; }
+        .comment-input-row input:focus { border-color: #1e3c72; }
+        .comment-input-row button { padding: 8px 14px; background: #1e3c72; color: white; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+        .comment-input-row button:hover { background: #2a5298; }
+        .comment-hint { font-size: 11px; color: #bbb; margin-top: 4px; }
+
+        /* 加载中 */
+        .loading { text-align: center; padding: 40px; }
+        .loading .spinner { width: 36px; height: 36px; border: 3px solid #e0e0e0; border-top-color: #1e3c72; border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 12px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 规则变更提示弹窗 */
+        .rule-modal-overlay { position: fixed; inset: 0; background: rgba(20,35,70,0.55); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        .rule-modal { background: #fff; border-radius: 18px; max-width: 440px; width: 100%; padding: 28px 26px 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: rulePop .35s cubic-bezier(.2,.8,.3,1.2); text-align: center; }
+        @keyframes rulePop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .rule-modal-badge { display: inline-block; background: #1e3c72; color: #fff; font-size: 12px; font-weight: 700; padding: 4px 14px; border-radius: 20px; margin-bottom: 12px; letter-spacing: 1px; }
+        .rule-modal h2 { font-size: 21px; color: #1a2f5e; margin: 0 0 4px; }
+        .rule-modal-sub { font-size: 12px; color: #aaa; margin: 0 0 18px; }
+        .rule-modal-body { text-align: left; }
+        .rule-modal-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f2f2f2; font-size: 13.5px; color: #444; line-height: 1.7; }
+        .rule-modal-item:last-child { border-bottom: none; }
+        .rmi-tag { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; background: #fff3e0; color: #ef6c00; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
+        .rule-modal-item b { color: #1a2f5e; }
+        .rule-modal-btn { margin-top: 20px; width: 100%; padding: 13px; background: linear-gradient(135deg,#1e3c72,#2a5298); color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
+        .rule-modal-btn:hover { filter: brightness(1.08); }
+        /* 对阵形势图（竖版） */
+        .bracket-viewport { width: 100%; height: calc(100vh - var(--hh, 96px) - var(--th, 56px) - 28px); min-height: 420px; overflow: hidden; position: relative; touch-action: none; background: linear-gradient(160deg,#f7f9fd 0%,#eef3fb 100%); border-radius: 14px; box-shadow: inset 0 0 0 1px rgba(30,60,114,0.06); }
+        .bracket-zoom { transform-origin: center top; transition: transform .08s linear; position: relative; margin: 0 auto; }
+        .bk-lines { position: absolute; top: 0; left: 0; pointer-events: none; }
+        .bk-round-label { position: absolute; left: 6px; font-size: 11px; font-weight: 700; color: #1e3c72; letter-spacing: .5px; }
+        .bk-box { position: absolute; background: #fff; border: 1px solid #c3d0e8; border-radius: 11px; overflow: hidden; box-shadow: 0 2px 6px rgba(30,60,114,0.10); }
+        .bk-box.final { border: 2px solid #1e3c72; box-shadow: 0 3px 10px rgba(30,60,114,0.22); }
+        .bk-box.tbd { opacity: .45; filter: grayscale(0.3); }
+        .bk-box.tbd .bk-name { color: #b9aeb4; }
+        .bk-row { display: flex; align-items: center; gap: 5px; height: 50%; padding: 0 7px; box-sizing: border-box; }
+        .bk-row + .bk-row { border-top: 1px solid #e8eef7; }
+        .bk-flag { width: 22px; height: 15px; object-fit: cover; border-radius: 3px; flex: 0 0 auto; background: #f1f1f1; box-shadow: 0 0 0 1px rgba(0,0,0,0.04); }
+        .bk-name { font-size: 11.5px; font-weight: 700; color: #2b2b2b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; }
+        .bk-score { font-size: 14px; font-weight: 800; color: #2b2b2b; flex: 0 0 auto; min-width: 13px; text-align: right; }
+        .bk-row.win .bk-name, .bk-row.win .bk-score { color: #15803d; }
+        .bk-row.lose .bk-name, .bk-row.lose .bk-score { color: #c2c9d6; }
+        .bk-badge-final { position: absolute; background: linear-gradient(135deg,#2a5298,#1e3c72); color: #fff; font-size: 12px; font-weight: 800; border-radius: 11px; padding: 3px 14px; transform: translateX(-50%); white-space: nowrap; box-shadow: 0 2px 6px rgba(30,60,114,0.3); }
+        .bk-conn { stroke: #c3d0e8; stroke-width: 1.8; fill: none; stroke-linecap: round; }
+    </style>
+<script src="config.js"></script>
+</head>
+<body>
+
+<!-- Toast提示 -->
+<div id="toast"></div>
+
+<!-- 规则变更提示弹窗 -->
+<div id="rule-modal-overlay" class="rule-modal-overlay">
+    <div class="rule-modal">
+        <div class="rule-modal-badge">📢 规则更新</div>
+        <h2>竞猜规则有调整</h2>
+        <p class="rule-modal-sub">自 2026-07-10 起生效</p>
+        <div class="rule-modal-body">
+            <div class="rule-modal-item">
+                <span class="rmi-tag">①</span>
+                <div><b>积分写法更新</b>：每场先算<strong>基础分</strong>（参与1 / 方向对3 / 净胜球4 / 完美5），再乘以该场<strong>阶段倍率</strong>（小组赛×1 → 季军赛×6 → 决赛×7，倍率已高亮）。</div>
+            </div>
+            <div class="rule-modal-item">
+                <span class="rmi-tag">②</span>
+                <div><b>四分之一决赛起特别奖励</b>：参与奖或方向对且<strong>猜中主队或客队任一队比分</strong>，基础分额外 <strong>+0.5</strong>，再乘倍率。</div>
+            </div>
+            <div class="rule-modal-item">
+                <span class="rmi-tag">③</span>
+                <div><b>今日已按新规则重算</b>：包括法国 2-0 摩洛哥在内，今天及之后的比赛均按新规则计分。</div>
+            </div>
+        </div>
+        <button class="rule-modal-btn" onclick="closeRuleModal()">我知道了，开始竞猜</button>
+    </div>
+</div>
+
+<!-- 登录界面 -->
+<div id="login-screen">
+    <div class="login-box">
+        <div class="login-logo">⚽</div>
+        <h1>2026世界杯竞猜</h1>
+        <p>FIFA World Cup 2026</p>
+        <select id="nickname-input" onchange="onNickChange()" style="width:100%;padding:13px 14px;border:2px solid #e0e0e0;border-radius:10px;font-size:16px;margin-bottom:8px;outline:none;background:white;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 12 12%22><path d=%22M2 4l4 4 4-4%22 fill=%22none%22 stroke=%22%23999%22 stroke-width=%221.5%22/></svg>');background-repeat:no-repeat;background-position:right 14px center;">
+            <option value="">-- 选择你的名字 --</option>
+            <option value="P01">P01</option>
+            <option value="P02">P02</option>
+            <option value="P03">P03</option>
+            <option value="P04">P04</option>
+            <option value="P05">P05</option>
+            <option value="P06">P06</option>
+            <option value="P07">P07</option>
+            <option value="P08">P08</option>
+            <option value="P09">P09</option>
+            <option value="P10">P10</option>
+            <option value="P11">P11</option>
+            <option value="P12">P12</option>
+            <option value="P13">P13</option>
+            <option value="P14">P14</option>
+            <option value="P16">P16</option>
+            <option value="__new__">+ 新人加入</option>
+        </select>
+        <div id="new-name-row" style="display:none;margin-bottom:16px;">
+            <input type="text" id="new-name-input" placeholder="输入你的昵称（2-8字）" maxlength="8" style="width:100%;padding:13px 14px;border:2px solid #e0e0e0;border-radius:10px;font-size:16px;outline:none;">
+        </div>
+        <button onclick="login()">开始竞猜</button>
+        <div class="login-tip">
+            名字将保存在本设备浏览器中<br>
+            积分从你第一次参与起开始累计
+        </div>
+    </div>
+</div>
+
+<!-- 主应用 -->
+<div id="main-app">
+    <!-- 顶栏 -->
+    <div class="header">
+        <div class="header-row">
+            <div class="header-left">
+                <h1>⚽ 2026世界杯竞猜</h1>
+                <p id="header-sub">实时数据 · 自动同步</p>
+            </div>
+            <div class="header-right">
+                <div id="player-count-badge" style="background:#e8f5e9; color:#2e7d32; border-radius:12px; padding:2px 8px; font-size:12px; font-weight:600; margin-right:8px; display:none;">👥 <span id="player-count">0</span>人</div>
+                <div class="avatar" id="avatar-char">?</div>
+                <span id="current-user" style="font-size:13px; font-weight:600; max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+                <button onclick="changeNickname()" title="更换昵称" style="background:none; border:none; cursor:pointer; font-size:14px; padding:2px 4px; margin-left:2px; opacity:0.5;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'">✏️</button>
+            </div>
+        </div>
+        <div class="header-sync">
+            <div><span class="dot dot-g" id="update-dot"></span><span id="update-text">等待同步...</span></div>
+            <button class="btn-refresh" onclick="syncAll()" style="padding:4px 12px; background:rgba(255,255,255,0.18); color:#fff; border:none; border-radius:5px; cursor:pointer; font-size:12px;">↻ 刷新数据</button>
+        </div>
+    </div>
+
+    <!-- 内容区 -->
+    <div id="content-layer">
+    <div id="zoom-inner">
+
+    <div id="tab-matches" class="content active">
+        <div class="loading"><div class="spinner"></div><p style="color:#aaa; font-size:13px;">正在加载赛程数据...</p></div>
+    </div>
+    <div id="tab-my-predictions" class="content"></div>
+    <div id="tab-leaderboard" class="content"></div>
+    <div id="tab-bracket" class="content"></div>
+    <div id="tab-rules" class="content">
+<div class="rules-card" style="font-size:13px; color:#555; line-height:2;">
+            <h3>📋 参与规则</h3>
+            每场比赛最多可修改预测 <strong>3次</strong><br>
+            比赛开赛前 <strong>1分钟</strong>，预测锁定<br>
+            今日和明日比赛均可预测<br>
+            新加入玩家从下一场比赛开始累计积分<br>
+            小组赛以常规时间比分为准<br>
+            淘汰赛以常规时间+加时赛总比分为准（不含点球决胜进球）<br>
+            数据来源：worldcup26.ir API（自动同步）
+        </div>
+<div class="rules-card">
+            <h3>🏅 积分规则</h3>
+            <p style="font-size:13px; color:#555; margin-bottom:12px;">每场比赛先按表现获得<strong>基础分</strong>，再乘以该场的<strong>阶段倍率</strong>（见下表），即本场实得积分。</p>
+            <div class="rule-row">
+                <div class="rule-desc" style="font-size:14px; color:#444;">完美比分（主客队比分全中）</div>
+                <span class="rule-pts-badge rpb-5">5 分</span>
+            </div>
+            <div class="rule-row">
+                <div class="rule-desc" style="font-size:14px; color:#444;">
+                    猜对净胜球
+                    <div style="font-size:11px; color:#aaa; margin-top:2px;">胜/负场景：方向相同且净胜球差值相同（平局不适用）</div>
+                </div>
+                <span class="rule-pts-badge rpb-4">4 分</span>
+            </div>
+            <div class="rule-row">
+                <div class="rule-desc" style="font-size:14px; color:#444;">猜对胜负平（方向对）</div>
+                <span class="rule-pts-badge rpb-3">3 分</span>
+            </div>
+            <div class="rule-row">
+                <div class="rule-desc" style="font-size:14px; color:#444;">以上都不对（参与奖）</div>
+                <span class="rule-pts-badge rpb-1">1 分</span>
+            </div>
+            <div style="margin-top:14px; padding:13px; background:#eef4ff; border-radius:9px; font-size:13px; color:#333; line-height:2;">
+                <strong style="color:#1a2f5e;">公式</strong>：本场得分 = 基础分 × 阶段倍率<br>
+                例：四分之一决赛（倍率 <b style="color:#c0392b;">×4</b>），方向对得 3 分 → 实得 <strong>3 × 4 = 12</strong> 分
+            </div>
+        </div>
+<div class="rules-card" style="font-size:13px; color:#555; line-height:2;">
+            <h3>🏆 淘汰赛积分规则</h3>
+            <p style="margin-bottom:10px;">从十六分之一决赛起，每轮倍数递增。<span style="color:#c0392b; font-weight:700;">红色高亮列</span>即为该阶段倍率。</p>
+            <table style="width:100%; font-size:12px; border-collapse:collapse; text-align:center;">
+                <tr style="background:#f5f5f5;">
+                    <th style="padding:6px; border:1px solid #ddd;">阶段</th>
+                    <th style="padding:6px; border:1px solid #ddd; background:#fdeaea; color:#c0392b;">倍率</th>
+                    <th style="padding:6px; border:1px solid #ddd;">参与 1×</th>
+                    <th style="padding:6px; border:1px solid #ddd;">方向对 3×</th>
+                    <th style="padding:6px; border:1px solid #ddd;">净胜球 4×</th>
+                    <th style="padding:6px; border:1px solid #ddd;">完美 5×</th>
+                </tr>
+                <tr>
+                    <td style="padding:6px; border:1px solid #ddd;">小组赛</td>
+                    <td style="padding:6px; border:1px solid #ddd; background:#fdeaea; color:#c0392b; font-weight:700; font-size:14px;">×1</td>
+                    <td style="padding:6px; border:1px solid #ddd;">1</td>
+                    <td style="padding:6px; border:1px solid #ddd;">3</td>
+                    <td style="padding:6px; border:1px solid #ddd;">4</td>
+                    <td style="padding:6px; border:1px solid #ddd;">5</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px; border:1px solid #ddd;">十六分之一决赛</td>
+                    <td style="padding:6px; border:1px solid #ddd; background:#fdeaea; color:#c0392b; font-weight:700; font-size:14px;">×2</td>
+                    <td style="padding:6px; border:1px solid #ddd;">2</td>
+                    <td style="padding:6px; border:1px solid #ddd;">6</td>
+                    <td style="padding:6px; border:1px solid #ddd;">8</td>
+                    <td style="padding:6px; border:1px solid #ddd;">10</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px; border:1px solid #ddd;">八分之一决赛</td>
+                    <td style="padding:6px; border:1px solid #ddd; background:#fdeaea; color:#c0392b; font-weight:700; font-size:14px;">×3</td>
+                    <td style="padding:6px; border:1px solid #ddd;">3</td>
+                    <td style="padding:6px; border:1px solid #ddd;">9</td>
+                    <td style="padding:6px; border:1px solid #ddd;">12</td>
+                    <td style="padding:6px; border:1px solid #ddd;">15</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px; border:1px solid #ddd;">四分之一决赛</td>
+                    <td style="padding:6px; border:1px solid #ddd; background:#fdeaea; color:#c0392b; font-weight:700; font-size:14px;">×4</td>
+                    <td style="padding:6px; border:1px solid #ddd;">4</td>
+                    <td style="padding:6px; border:1px solid #ddd;">12</td>
+                    <td style="padding:6px; border:1px solid #ddd;">16</td>
+                    <td style="padding:6px; border:1px solid #ddd;">20</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px; border:1px solid #ddd;">半决赛</td>
+                    <td style="padding:6px; border:1px solid #ddd; background:#fdeaea; color:#c0392b; font-weight:700; font-size:14px;">×5</td>
+                    <td style="padding:6px; border:1px solid #ddd;">5</td>
+                    <td style="padding:6px; border:1px solid #ddd;">15</td>
+                    <td style="padding:6px; border:1px solid #ddd;">20</td>
+                    <td style="padding:6px; border:1px solid #ddd;">25</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px; border:1px solid #ddd;">季军赛</td>
+                    <td style="padding:6px; border:1px solid #ddd; background:#fdeaea; color:#c0392b; font-weight:700; font-size:14px;">×6</td>
+                    <td style="padding:6px; border:1px solid #ddd;">6</td>
+                    <td style="padding:6px; border:1px solid #ddd;">18</td>
+                    <td style="padding:6px; border:1px solid #ddd;">24</td>
+                    <td style="padding:6px; border:1px solid #ddd;">30</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px; border:1px solid #ddd;">决赛</td>
+                    <td style="padding:6px; border:1px solid #ddd; background:#fdeaea; color:#c0392b; font-weight:700; font-size:14px;">×7</td>
+                    <td style="padding:6px; border:1px solid #ddd;">7</td>
+                    <td style="padding:6px; border:1px solid #ddd;">21</td>
+                    <td style="padding:6px; border:1px solid #ddd;">28</td>
+                    <td style="padding:6px; border:1px solid #ddd;">35</td>
+                </tr>
+            </table>
+            <p style="margin-top:14px;margin-bottom:8px;font-weight:600;color:#1a2f5e;">🎯 四分之一决赛起 · 特别奖励</p>
+            <p style="margin-bottom:8px;">从<strong>四分之一决赛</strong>开始（含已结算场次）：</p>
+            <p style="margin-bottom:10px;">若你的预测属于 <strong>参与奖（1分）</strong> 或 <strong>方向对（3分）</strong>，且<strong>猜中了主队或客队中任意一队的比分</strong>，则基础分额外 <strong style="color:#c0392b;">+0.5</strong>，再乘阶段倍率。</p>
+            <div style="padding:10px 13px; background:#fff7e6; border-radius:9px; font-size:12px; color:#7a5b00; line-height:1.9;">
+                例：四分之一决赛（×4），参与奖且猜中客队 0 球 → (1 + 0.5) × 4 = <strong>6 分</strong><br>
+                例：四分之一决赛（×4），方向对且猜中主队 → (3 + 0.5) × 4 = <strong>14 分</strong>
+            </div>
+            <p style="margin-top:8px; font-size:11px; color:#aaa;">注：净胜球相同（4分）与完美比分（5分）不享受此 +0.5 奖励。</p>
+        </div>
+<div class="rules-card" style="font-size:13px; color:#555; line-height:2; border:1px solid #f0c9a0;">
+    <h3>🎲 X因素附加题规则</h3>
+    <p style="margin-bottom:8px;font-weight:600;color:#e65100;">什么是 X因素</p>
+    <p style="margin-bottom:10px;">从<strong>半决赛（M101）</strong>起至<strong>决赛（M104）</strong>，每场比赛额外设 <strong>3 道</strong>「X因素」附加题。答题独立计分，不影响常规预测积分与历史统计。</p>
+    <p style="margin-bottom:8px;font-weight:600;color:#e65100;">玩法</p>
+    <ul style="margin:0 0 10px 18px; padding:0;">
+        <li>赛前在预测卡<strong>问卷区（比分预测框上方）</strong>作答，每题单选。</li>
+        <li><strong>可跳过任意题</strong>：不选则该题<strong>不加分也不扣分</strong>；已选项<strong>再点一次可取消</strong>选择。</li>
+        <li>答对得 <strong>+分</strong>、答错扣 <strong>−分</strong>（每题分值见赛程卡标注「对+N／错−M」）。</li>
+        <li>问卷与比分<strong>同步锁定</strong>（开赛前 1 分钟），且与比分<strong>共用 3 次修改额度</strong>。</li>
+        <li>赛后在已结束卡片展示每题对错（✅/❌）与计入的 X 分数。</li>
+    </ul>
+    <p style="margin-bottom:8px;font-weight:600;color:#e65100;">计分与展示</p>
+    <ul style="margin:0 0 6px 18px; padding:0;">
+        <li>X 因素分独立存储，<strong>不污染</strong>常规积分曲线 / 请客分析。</li>
+        <li>排行榜<strong>总分 = 常规积分 + X因素分</strong>；「综合评定」排名仍按常规积分（不含 X）。</li>
+        <li>每场题目与分值由<strong>出题人赛前设定</strong>，以赛程卡内显示为准。</li>
+    </ul>
+</div>
+<div class="rules-card" style="font-size:13px; color:#555; line-height:2;">
+            <h3>🎖️ 称号规则</h3>
+            <p style="margin-bottom:8px;font-weight:600;color:#1a2f5e;">称号体系</p>
+            <p style="margin-bottom:6px;">称号分<b style="color:#b8860b;">王系列</b>（金色，依据全量数据）和<b style="color:#708090;">达人系列</b>（银色，依据当日数据），每项仅授予该指标第一名（并列都给），每人最多显示2个。</p>
+            <table style="width:100%;font-size:12px;border-collapse:collapse;text-align:left;margin-bottom:10px;">
+                <tr style="background:#fff8e1;">
+                    <th style="padding:6px 8px;border:1px solid #e0d5a0;width:80px;">系列</th>
+                    <th style="padding:6px 8px;border:1px solid #e0d5a0;width:80px;">称号</th>
+                    <th style="padding:6px 8px;border:1px solid #e0d5a0;">授予条件</th>
+                </tr>
+                <tr>
+                    <td style="padding:6px 8px;border:1px solid #e0d5a0;color:#b8860b;font-weight:700;" rowspan="4">王系列</td>
+                    <td style="padding:6px 8px;border:1px solid #e0d5a0;">完美王</td>
+                    <td style="padding:6px 8px;border:1px solid #e0d5a0;">总完美预测次数最多（需≥3次）</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 8px;border:1px solid #e0d5a0;">X因素王</td>
+                    <td style="padding:6px 8px;border:1px solid #e0d5a0;">X因素题累计得分最高者（需＞0分；并列则同持）</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 8px;border:1px solid #e0d5a0;">神准王</td>
+                    <td style="padding:6px 8px;border:1px solid #e0d5a0;">场均基础分最高（需≥10场已结算）</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 8px;border:1px solid #e0d5a0;">全勤王</td>
+                    <td style="padding:6px 8px;border:1px solid #e0d5a0;">从首次参与起，之后每场已结算比赛都参与（参与率100%），且累计参与≥10场（多人可同持）</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 8px;border:1px solid #d0d8e0;color:#708090;font-weight:700;" rowspan="4">达人系列</td>
+                    <td style="padding:6px 8px;border:1px solid #d0d8e0;">完美达人</td>
+                    <td style="padding:6px 8px;border:1px solid #d0d8e0;">当日完美预测次数最多（需≥1次）</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 8px;border:1px solid #d0d8e0;">神准达人</td>
+                    <td style="padding:6px 8px;border:1px solid #d0d8e0;">当日场均基础分最高（需当日≥1场已结算）</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 8px;border:1px solid #d0d8e0;">逆袭达人</td>
+                    <td style="padding:6px 8px;border:1px solid #d0d8e0;">当日积分排名 较 上一次比赛日的当日排名，至少连超 2 人（升≥2名）且全场升幅最大（自动跳过空档日；幅度不足则空缺）</td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 8px;border:1px solid #d0d8e0;">全勤达人</td>
+                    <td style="padding:6px 8px;border:1px solid #d0d8e0;">当日参与率最高（当日已结算场中实际参与比例）</td>
+                </tr>
+            </table>
+            <p style="margin-bottom:8px;font-weight:600;color:#1a2f5e;">称号显示规则</p>
+            <div style="padding:8px 12px;background:#f8f9fb;border-radius:8px;font-size:12px;line-height:2;">
+                <b>总积分</b>排行榜：仅显示王系列称号（最多2个）<br>
+                <b>当日</b>排行榜：仅显示达人系列称号（最多2个）<br>
+                <b>综合评定</b>排行榜：王系列优先，达人系列补充，最多2个<br>
+                达人系列优先级：完美达人 > 神准达人 > 逆袭达人 > 全勤达人
+            </div>
+            <p style="margin-top:10px;margin-bottom:8px;font-weight:600;color:#1a2f5e;">排名标记</p>
+            <div style="padding:8px 12px;background:#f8f9fb;border-radius:8px;font-size:12px;line-height:2;">
+                <span style="color:#f59e0b;">👑</span> + 数字 = 累计获得每日冠军的次数（当日总积分排名第一）<br>
+                <span style="color:#000;">💩</span> + 数字 = 累计获得每日垫底的次数（当日总积分排名最后）
+            </div>
+        </div>
+    </div>
+    </div><!-- /#zoom-inner -->
+    </div><!-- /#content-layer -->
+
+    <!-- 底部标签页 -->
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('matches', this)"><span class="tab-icon">📅</span>赛程</div>
+        <div class="tab" onclick="switchTab('bracket', this)"><span class="tab-icon">🗺️</span>对阵</div>
+        <div class="tab" onclick="switchTab('my-predictions', this)"><span class="tab-icon">📝</span>我的</div>
+        <div class="tab" onclick="switchTab('leaderboard', this)"><span class="tab-icon">🏆</span>排名</div>
+        <div class="tab" onclick="switchTab('rules', this)"><span class="tab-icon">📋</span>规则</div>
+    </div>
+</div>
+
+<script src="match_data.js?v=20260720a"></script>
+<script src="data.js?v=20260716b"></script>
+<script>
+// ======== 配置 ========
+const NPOINT_ID = ((typeof process!=='undefined'&&process.env&&process.env.NPOINT_ID)||(typeof window!=='undefined'&&window.CONFIG&&window.CONFIG.npointId)||'REPLACE_WITH_NPOINT_ID');  // npoint.io 云端数据存储
+const NPOINT_URL = 'https://api.npoint.io/' + NPOINT_ID;
+// 全局 fetch 超时保护：npoint 不可达时不再无限「正在同步」，超时后由调用方优雅失败
+(function(){
+  const _f = (typeof window!=='undefined' && window.fetch) ? window.fetch.bind(window) : (typeof fetch!=='undefined' ? fetch.bind(self) : null);
+  if (!_f || typeof AbortController==='undefined') return;
+  const TIMEOUT = 12000;
+  const wrapped = function(url, opts){
+    opts = opts || {};
+    if (opts.signal) return _f(url, opts);
+    const ctrl = new AbortController();
+    const tid = setTimeout(function(){ ctrl.abort(); }, TIMEOUT);
+    return _f(url, Object.assign({}, opts, { signal: ctrl.signal })).finally(function(){ clearTimeout(tid); });
+  };
+  if (typeof window!=='undefined') window.fetch = wrapped; else if (typeof self!=='undefined') self.fetch = wrapped;
+})();
+const CACHE_DURATION = 10 * 60 * 1000;
+const LOCK_MINUTES = 1;  // 开赛前1分钟锁定预测
+const xfSel = {}; // X因素当前选择状态（按 matchId-xfId 存选项index；用于toggle与提交收集）
+
+// 防缓存：GET请求加时间戳
+function noCacheUrl(url) { return url + '?_t=' + Date.now(); }
+
+// ======== 中文队名映射（用于match_data.js中没有中文名的队伍）========
+const CN_NAMES = {
+    'Mexico': '墨西哥', 'South Africa': '南非', 'South Korea': '韩国',
+    'Czech Republic': '捷克', 'Canada': '加拿大',
+    'Bosnia and Herzegovina': '波黑', 'Qatar': '卡塔尔', 'Switzerland': '瑞士',
+    'Brazil': '巴西', 'Morocco': '摩洛哥', 'Haiti': '海地', 'Scotland': '苏格兰',
+    'United States': '美国', 'Paraguay': '巴拉圭', 'Australia': '澳大利亚',
+    'Turkey': '土耳其', 'Germany': '德国', 'Curaçao': '库拉索',
+    'Ivory Coast': '科特迪瓦', 'Ecuador': '厄瓜多尔', 'Netherlands': '荷兰',
+    'Japan': '日本', 'Sweden': '瑞典', 'Tunisia': '突尼斯',
+    'Belgium': '比利时', 'Egypt': '埃及', 'Iran': '伊朗',
+    'New Zealand': '新西兰', 'Spain': '西班牙', 'Cape Verde': '佛得角',
+    'Saudi Arabia': '沙特', 'Uruguay': '乌拉圭', 'France': '法国',
+    'Senegal': '塞内加尔', 'Norway': '挪威', 'Iraq': '伊拉克',
+    'Argentina': '阿根廷', 'Algeria': '阿尔及利亚', 'Austria': '奥地利',
+    'Jordan': '约旦', 'Portugal': '葡萄牙', 'Uzbekistan': '乌兹别克斯坦',
+    'Colombia': '哥伦比亚', 'Democratic Republic of the Congo': '民主刚果',
+    'England': '英格兰', 'Croatia': '克罗地亚', 'Ghana': '加纳', 'Panama': '巴拿马'
+};
+
+// ======== 数据 ========
+let matches = [];       // 从MATCH_DATA + npoint.io比分合并
+let allPreds = [];      // 从npoint.io加载
+let allComments = [];   // 从npoint.io加载留言
+let cloudScores = {};   // 从npoint.io加载的比分数据
+let allPeeks = [];      // 偷看记录：[{matchId, userName, cost, ts}]，付参与分看他人预测
+
+// ======== 积分计算函数 ========
+function getScoreMultiplier(phase) {
+    const multipliers = {
+        '小组赛': 1,
+        '十六分之一决赛': 2,
+        '八分之一决赛': 3,
+        '四分之一决赛': 4,
+        '半决赛': 5,
+        '季军赛': 6,
+        '决赛': 7
+    };
+    return multipliers[phase] || 1;
+}
+
+function calcPts(ah, aa, ph, pa, phase) {
+    // 基础得分：5-4-3-1
+    let basePts;
+    if (ah === ph && aa === pa) basePts = 5;                        // 完整比分相同 → 5分
+    else {
+        const diff = ah - aa, pdiff = ph - pa;
+        if (diff === pdiff && diff !== 0) basePts = 4;              // 净胜球相同（非平局）→ 4分
+        else {
+            const ar = ah > aa ? 'w' : ah < aa ? 'l' : 'd';
+            const pr = ph > pa ? 'w' : ph < pa ? 'l' : 'd';
+            basePts = (ar === pr) ? 3 : 1;                          // 胜负平相同 → 3分，否则 → 1分
+        }
+    }
+    
+    // 根据比赛阶段计算倍数
+    const multiplier = getScoreMultiplier(phase);
+    // 四分之一决赛起（倍率≥4）：参与奖/方向对且猜中任一队比分 → +0.5 基础分
+    if (multiplier >= 4 && (basePts === 1 || basePts === 3)) {
+        if (ph === ah || pa === aa) basePts += 0.5;
+    }
+    return basePts * multiplier;
+}
+
+// 是否「完美比分」：预测比分与实际比分完全一致（与 calcPts 的 basePts=5 口径一致）
+function isPerfectPred(p, m) {
+    if (!p || !m || m.status !== 'finished' || m.homeScore == null || m.awayScore == null) return false;
+    if (p.homePred == null || p.awayPred == null) return false;
+    return Number(p.homePred) === Number(m.homeScore) && Number(p.awayPred) === Number(m.awayScore);
+}
+
+// ======== 偷看比分功能（付参与分看他人预测）========
+// 偷看成本 = 该场参与分 = 阶段倍率×1（小组赛1 / 1-16决赛2 / 八分之一3 / 1-4决赛4 / 半决赛·季军6 / 决赛7）
+function getPeekCost(m) { return getScoreMultiplier(m ? m.phase : '小组赛'); }
+// 某用户是否已偷看某场
+function hasPeeked(matchId, user) {
+    const mid = String(matchId).replace(/^M/, '');
+    return allPeeks.some(pk => pk.userName === user && String(pk.matchId).replace(/^M/, '') === mid);
+}
+// 某用户对某场的偷看成本合计（正常只会有1条）
+function peekCostForMatch(matchId, user) {
+    const mid = String(matchId).replace(/^M/, '');
+    return allPeeks.filter(pk => pk.userName === user && String(pk.matchId).replace(/^M/, '') === mid)
+        .reduce((s, pk) => s + (Number(pk.cost) || 0), 0);
+}
+// 提交偷看：GET完整数据→校验未重复→push→POST全量（安全，不覆盖其他字段）
+async function submitPeek(matchId) {
+    const me = localStorage.getItem('wc_nickname');
+    if (!me || me === 'null' || me.includes('\uFFFD')) { showToast('请先设置有效昵称'); return; }
+    const m = matches.find(x => String(x.id) === String(matchId).replace(/^M/, ''));
+    if (!m) { showToast('比赛不存在'); return; }
+    const cost = getPeekCost(m);
+    if (hasPeeked(matchId, me)) { showToast('你已偷看过这场'); loadMatches(); return; }
+    if (!confirm(`确定花 ${cost} 分偷看本场所有人的预测比分吗？\n（该分从本场结算扣除，已花不可退）`)) return;
+    try {
+        const currentData = await fetchCurrentRobust();
+        if (!currentData) { showToast('网络异常，操作失败，请重试'); return; }
+        const peeks = currentData['peeks_A'] || [];
+        // 并发再校验
+        if (peeks.some(pk => pk.userName === me && String(pk.matchId).replace(/^M/, '') === String(matchId).replace(/^M/, ''))) {
+            allPeeks = peeks; showToast('你已偷看过这场'); loadMatches(); return;
+        }
+        peeks.push({ matchId: String(matchId).replace(/^M/, ''), userName: me, cost, ts: new Date().toISOString() });
+        const writeData = {};
+        for (const key of Object.keys(currentData)) { writeData[key] = currentData[key]; }
+        writeData['peeks_A'] = peeks;
+        await mergeProtectBeforePost(writeData);
+        const postRes = await fetch(NPOINT_URL, {
+            method: 'POST', mode: 'cors',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify(writeData)
+        });
+        if (postRes.ok) {
+            allPeeks = peeks;
+            showToast(`已扣 ${cost} 分，解锁本场预测 🔍`);
+            syncAll();
+        } else {
+            showToast('操作失败，请重试');
+        }
+    } catch (e) {
+        console.error('偷看提交失败:', e);
+        showToast('操作失败，请重试');
+    }
+}
+
+
+// ======== 把一份云端数据（或同源快照）归一化后写入内存 ========
+function applyData(data) {
+    const rawPreds = data.predictions || [];
+    // 规范用户名集合：所有非乱码用户名
+    const cleanNames = new Set(rawPreds.filter(p => p.userName && p.userName !== 'null' && !p.userName.includes('\uFFFD')).map(p => p.userName));
+    // 乱码用户名 -> 规范名（按保留字符唯一匹配名册，防御 npoint 中文损坏）
+    function canonName(n) {
+        if (!n || n === 'null' || !n.includes('\uFFFD')) return n;
+        const clean = [...n].filter(c => c !== '\uFFFD');
+        if (!clean.length) return n;
+        const hits = [...cleanNames].filter(u => clean.every(ch => [...u].includes(ch)));
+        return hits.length === 1 ? hits[0] : n;
+    }
+    // 归一化 + 去重（同一用户同一场只保留一条，优先带分），杜绝乱码导致记录"消失"
+    const deduped = [];
+    rawPreds.filter(p => p.userName && p.userName !== 'null').forEach(p => {
+        p.userName = canonName(p.userName);
+        p.matchId = String(p.matchId).replace(/^M/, '');
+        const ex = deduped.find(x => x.userName === p.userName && x.matchId === p.matchId);
+        if (!ex) deduped.push(p);
+        else if ((typeof ex.points !== 'number' || isNaN(ex.points)) && typeof p.points === 'number' && !isNaN(p.points)) Object.assign(ex, p);
+    });
+    allPreds = deduped;
+    cloudScores = data.scores || {};
+    // 评论/偷看用户名也一并归一化
+    allComments = (data['comments_A'] || []).map(c => { if (c.userName) c.userName = canonName(c.userName); return c; });
+    allPeeks = (data['peeks_A'] || []).map(pk => { if (pk.userName) pk.userName = canonName(pk.userName); return pk; });
+    mergeScores();
+    refreshUserOptions(); // 动态补充登录下拉（含新人）
+}
+
+// 带超时的一次性 JSON 拉取；任何失败（网络/CORS/超时/解析/fetch 不可用）都返回 null，不抛异常
+// 关键：用 Promise.race 做「硬超时兜底」——即便微信 X5 内核 AbortController 无法取消挂起的 fetch，
+// 到点也强制返回 null，绝不让同步 Promise 永久 pending 卡死界面。
+function tryJson(url, timeoutMs) {
+    const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    let fp;
+    try {
+        fp = fetch(noCacheUrl(url), ctrl ? { signal: ctrl.signal } : {})
+            .then(res => res.ok ? res.json() : null)
+            .catch(() => null);
+    } catch (e) {
+        fp = Promise.resolve(null);   // fetch 不存在或被同步拦截时直接返回 null
+    }
+    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), timeoutMs));
+    // 仅在超时才 abort（兜底防永久 pending）；成功路径绝不在 .then 里 abort，否则会打断 res.json() 的响应体读取 → 返回 null 误判离线
+    if (ctrl) setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, timeoutMs);
+    return Promise.race([fp, timeoutPromise]);
+}
+
+// 多次 GET 取「预测数最多」的副本，抵抗 npoint 读后不一致（避免拿到残缺副本当基准导致级联误删）
+async function fetchCurrentRobust(tries) {
+    tries = tries || 4;
+    let best = null, bestSize = -1;
+    for (let i = 0; i < tries; i++) {
+        const d = await tryJson(NPOINT_URL, 8000);
+        if (d && typeof d === 'object') {
+            const sz = (d.predictions?.length || 0) + (d.predictions_B?.length || 0) + Object.keys(d.scores || {}).length;
+            if (sz > bestSize) { bestSize = sz; best = d; }
+        }
+    }
+    return best;
+}
+
+// ======== 从云端拉取预测和比分（同源快照优先 → npoint 实时补充） ========
+// 注意：npoint.io 不返回 CORS 头，浏览器/微信 fetch 跨域必失败；故主源改为同源 data.js 快照
+// （由守护进程 score-poller 定期拉 npoint 重生并部署，等同最新数据，且无 CORS 问题）
+async function fetchSnapshot() {
+    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 8000));
+    let fp;
+    try {
+        fp = fetch(noCacheUrl('data.js'), { cache: 'no-store' })
+            .then(res => res.ok ? res.text() : null)
+            .then(txt => {
+                if (!txt) return null;
+                const m = txt.match(/WC_NPOINT_RAW\s*=\s*(\{[\s\S]*\})\s*;?\s*$/);
+                if (!m) return null;
+                try { return JSON.parse(m[1]); } catch (e) { return null; }
+            })
+            .catch(() => null);
+    } catch (e) { fp = Promise.resolve(null); }
+    return Promise.race([fp, timeoutPromise]);
+}
+
+async function fetchPreds() {
+    // 主源：同源 data.js 快照（无 CORS 问题；守护进程已把 npoint 最新数据固化进快照并部署）
+    const snap = await fetchSnapshot();
+    if (snap && snap.predictions) {
+        applyData(snap);
+        // 尽力补充：跨域 npoint 实时数据（微信/浏览器常因 CORS 失败，失败不影响主流程）
+        const live = await tryJson(NPOINT_URL, 8000);
+        if (live && live.predictions) applyData(live);
+        return true;
+    }
+    // 快照异常（极少见，如同源静态服务故障）：最后尝试跨域 npoint
+    const live = await tryJson(NPOINT_URL, 8000);
+    if (live && live.predictions) { applyData(live); return true; }
+    // 实时拉取失败 —— 保留启动时已加载的内置快照，页面照常显示真实数据
+    if (!matches.length) mergeScores();
+    return false;
+}
+
+// 将云端比分合并到MATCH_DATA
+function mergeScores() {
+    matches = MATCH_DATA.map(m => {
+        const s = cloudScores[String(m.id)] || cloudScores[String(m.id).replace(/^M/, '')] || cloudScores[Number(String(m.id).replace(/^M/, ''))];
+        return {
+            id: String(m.id).replace(/^M/, ''),
+            date: m.bjDate,
+            home: m.home,
+            away: m.away,
+            homeCn: m.homeCn,
+            awayCn: m.awayCn,
+            homeFlag: m.homeFlag,
+            awayFlag: m.awayFlag,
+            homeScore: s ? s.homeScore : (m.status === 'finished' ? m.homeScore : null),
+            awayScore: s ? s.awayScore : (m.status === 'finished' ? m.awayScore : null),
+            phase: m.phase,                                   // 阶段永远从MATCH_DATA取，不用cloudScores覆盖
+            reveal: m.reveal || false,                        // 决赛/特殊场次公开标记
+            settledDate: s ? s.settledDate : null,
+            status: s ? s.status : m.status,
+            type: '',
+            group: m.phase || '',
+            xFactors: m.xFactors || null,                     // X因素题目（静态）
+            xOutcomes: s ? (s.xOutcomes || null) : null       // X因素结算结果 {题id: 正确选项index}
+        };
+    });
+}
+
+
+// ======== 提交预测到npoint.io云端 ========
+async function submitPredToBackend(matchId, homePred, awayPred, xChoices) {
+    const me = localStorage.getItem('wc_nickname');
+    if (!me || me === 'null' || me.includes('\uFFFD')) { showToast('请先设置有效昵称'); return; }
+    try {
+        // 读取当前云端数据（稳健多 GET，取预测数最多的副本当基准，避免残缺副本导致误删）
+        const currentData = await fetchCurrentRobust();
+        if (!currentData) { showToast('网络异常，提交失败，请刷新后重试'); return false; }
+        const predictions = currentData.predictions || [];
+
+        const idx = predictions.findIndex(
+            p => p.matchId === String(matchId) && p.userName === me
+        );
+
+        if (idx >= 0) {
+            // 修改已有预测
+            if (predictions[idx].modifyCount >= 3) {
+                showToast('已达到3次修改上限！');
+                return false;
+            }
+            predictions[idx].homePred = homePred;
+            predictions[idx].awayPred = awayPred;
+            predictions[idx].modifyCount = (predictions[idx].modifyCount || 0) + 1;
+            predictions[idx].submittedAt = new Date().toISOString();
+            if (xChoices) predictions[idx].xChoices = xChoices;
+        } else {
+            // 新增预测
+            const newPred = {
+                matchId: String(matchId), userName: me, homePred, awayPred,
+                modifyCount: 0,
+                submittedAt: new Date().toISOString(),
+                points: null
+            };
+            if (xChoices) newPred.xChoices = xChoices;
+            predictions.push(newPred);
+        }
+
+        // 🛡️ 安全保护：检测是否有其他用户的预测被意外删除
+        const originalPreds = currentData.predictions || [];
+        const originalUserCounts = {};
+        originalPreds.forEach(p => {
+            originalUserCounts[p.userName] = (originalUserCounts[p.userName] || 0) + 1;
+        });
+        const newUserCounts = {};
+        predictions.forEach(p => {
+            newUserCounts[p.userName] = (newUserCounts[p.userName] || 0) + 1;
+        });
+        const lostUsers = [];
+        for (const [user, count] of Object.entries(originalUserCounts)) {
+            if ((newUserCounts[user] || 0) < count) {
+                lostUsers.push(`${user}(少${count - (newUserCounts[user] || 0)}场)`);
+            }
+        }
+        if (lostUsers.length > 0) {
+            showToast(`⚠️ 安全拦截：检测到${lostUsers.join('、')}的预测可能丢失！已拒绝提交。请刷新页面后重试。`);
+            console.error('[安全拦截] 预测数据异常：', { originalUserCounts, newUserCounts, lostUsers });
+            return false;
+        }
+
+        // 写回云端：保留其他实例的数据和scores
+        const writeData = {};
+        for (const key of Object.keys(currentData)) {
+            writeData[key] = currentData[key];
+        }
+        writeData.predictions = predictions;
+        await mergeProtectBeforePost(writeData);
+
+        // 🛡️ 硬地板：以本地已知正确预测数为基准，若本次写回会丢失大量预测，坚决拒绝（防级联误删）
+        const localCount = (typeof allPreds !== 'undefined' && Array.isArray(allPreds)) ? allPreds.length : writeData.predictions.length;
+        if (writeData.predictions.length < localCount - 3) {
+            showToast('⚠️ 安全拦截：检测到预测将大量丢失，已拒绝提交。请刷新页面后重试。');
+            console.error('[安全拦截-硬地板] 写回预测数 ' + writeData.predictions.length + ' < 本地 ' + localCount);
+            return false;
+        }
+
+        const postRes = await fetch(NPOINT_URL, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify(writeData)
+        });
+
+        if (postRes.ok) {
+            allPreds = predictions;
+            return true;
+        } else {
+            showToast('提交失败，请重试');
+            return false;
+        }
+    } catch (e) {
+        console.error('提交预测失败:', e);
+        showToast('提交失败，请重试');
+        return false;
+    }
+}
+
+// 防 npoint 读后不一致：POST 前二次拉取，补齐可能漏掉的记录，绝不因旧副本误删
+// 防 npoint 读后不一致：POST 前二次拉取，补齐所有数组字段可能漏掉的记录，绝不因旧副本误删
+async function mergeProtectBeforePost(writeData) {
+    try {
+        const fresh = await fetchCurrentRobust(4);
+        const arrayKeys = ['predictions', 'predictions_B', 'peeks_A', 'peeks_B', 'comments_A', 'comments_B'];
+        for (const key of arrayKeys) {
+            const a = writeData[key] = Array.isArray(writeData[key]) ? writeData[key] : [];
+            const b = Array.isArray(fresh[key]) ? fresh[key] : [];
+            const keyFn = (p) => key.startsWith('comments')
+                ? (p.userName || '') + '#' + (p.createdAt || '') + '#' + (p.text || '')
+                : (p.userName || '') + '#' + (p.matchId != null ? p.matchId : '');
+            const seen = new Set(a.map(keyFn));
+            for (const p of b) {
+                const k = keyFn(p);
+                if (!seen.has(k)) { a.push(p); seen.add(k); }
+            }
+        }
+    } catch (e) { console.warn('mergeProtect 跳过:', e); }
+}
+
+// ======== 重算积分（前端版，写回npoint.io）========
+async function recalcBackend() {
+    try {
+        const currentData = await fetchCurrentRobust();
+        if (!currentData) { console.warn('recalcBackend: 拉取失败'); return; }
+        const predictions = currentData.predictions || [];
+        let changed = false;
+
+        predictions.forEach(p => {
+            const m = matches.find(x => String(x.id) === String(p.matchId));
+            if (m && m.status === 'finished' && m.homeScore !== null) {
+                if (p.homePred != null) {
+                    const correctPts = calcPts(m.homeScore, m.awayScore, p.homePred, p.awayPred, m.phase);
+                    if (p.points !== correctPts) { p.points = correctPts; changed = true; }
+                }
+            }
+        });
+
+        if (changed) {
+            const writeData = {};
+            for (const key of Object.keys(currentData)) {
+                writeData[key] = currentData[key];
+            }
+            writeData.predictions = predictions;
+            await mergeProtectBeforePost(writeData);
+            await fetch(NPOINT_URL, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify(writeData)
+            });
+            allPreds = predictions;
+        }
+    } catch (e) { console.error('重算积分失败:', e); }
+}
+
+// ======== 留言功能 ========
+async function submitComment(matchId) {
+    const me = localStorage.getItem('wc_nickname');
+    if (!me || me === 'null' || me.includes('\uFFFD')) { showToast('请先设置有效昵称'); return; }
+    const input = document.getElementById('cmt-' + matchId);
+    const text = input.value.trim();
+    if (!text) { showToast('请输入留言内容'); return; }
+    if (text.length > 50) { showToast('留言最多50字哦'); return; }
+
+    // 检查冷却时间（20秒）
+    const now = Date.now();
+    const myComments = allComments.filter(c => c.userName === me && c.createdAt);
+    const lastCmt = myComments.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+    if (lastCmt && (now - new Date(lastCmt.createdAt).getTime()) < 20000) {
+        const wait = Math.ceil((20000 - (now - new Date(lastCmt.createdAt).getTime())) / 1000);
+        showToast(`请${wait}秒后再留言`); return;
+    }
+
+    try {
+        const currentData = await fetchCurrentRobust();
+        if (!currentData) { showToast('网络异常，留言失败，请重试'); return; }
+        const comments = currentData['comments_A'] || [];
+
+        // 再次检查冷却（防止并发）
+        const myAll = comments.filter(c => c.userName === me && c.createdAt);
+        const lastOne = myAll.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+        if (lastOne && (now - new Date(lastOne.createdAt).getTime()) < 20000) {
+            showToast('操作太快，请稍后再试'); return;
+        }
+
+        comments.push({
+            matchId: String(matchId), userName: me, text,
+            createdAt: new Date().toISOString()
+        });
+
+        const writeData = {};
+        for (const key of Object.keys(currentData)) { writeData[key] = currentData[key]; }
+        writeData['comments_A'] = comments;
+        await mergeProtectBeforePost(writeData);
+
+        const postRes = await fetch(NPOINT_URL, {
+            method: 'POST', mode: 'cors',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify(writeData)
+        });
+
+        if (postRes.ok) {
+            allComments = comments;
+            input.value = '';
+            showToast('留言成功 ✓');
+            syncAll(); // 提交留言后刷新一次，看到别人的最新留言
+        } else {
+            showToast('留言失败，请重试');
+        }
+    } catch (e) {
+        console.error('留言提交失败:', e);
+        showToast('留言失败，请重试');
+    }
+}
+
+function toggleComments(id, el) {
+    const sec = document.getElementById(id);
+    const open = sec.classList.toggle('open');
+    if (open) {
+        el.textContent = '▴ 收起留言';
+    } else {
+        const cnt = el.getAttribute('data-cmt-count');
+        el.textContent = cnt ? '💬 留言 (' + cnt + ')' : '💬 留言';
+    }
+}
+
+// ======== 同步全部数据 ========
+// silent=true：用于首屏。initMain 已先用本地快照渲染好界面，这里后台静默同步，
+//   绝不把状态点卡在"正在同步"，无论实时拉取成败都不阻塞界面交互。
+async function syncAll(silent) {
+    const dot = document.getElementById('update-dot');
+    const txt = document.getElementById('update-text');
+    if (!silent) { dot.className = 'dot dot-y'; txt.textContent = '正在同步...'; }
+
+    try {
+        const ok = await fetchPreds();
+
+        if (ok) {
+            dot.className = 'dot dot-g';
+            txt.textContent = '已同步 · ' + new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+            loadMatches(); loadMyPredictions(); loadLeaderboard();
+            updatePlayerCount();
+            if (document.getElementById('tab-bracket').classList.contains('active')) renderBracket();
+        } else {
+            // 实时拉取失败：保留首屏已渲染的本地快照，界面照常可浏览
+            dot.className = 'dot dot-y';
+            if (!silent) {
+                txt.textContent = '离线模式 · 显示本地快照';
+                showToast('网络不佳，显示本地快照数据');
+            } else {
+                txt.textContent = '本地数据 · 点击刷新';
+            }
+        }
+    } catch (e) {
+        console.error('同步失败:', e);
+        dot.className = 'dot dot-y';
+        if (!silent) { txt.textContent = '同步失败'; showToast('同步失败，请重试'); }
+        else { txt.textContent = '本地数据 · 点击刷新'; }
+    }
+    // 收官终章：决赛封笔(m104.settled)后，每次打开链接都弹最终章；semi/final 仅首次
+    const fm = getFinaleMode();
+    if (fm === 'end') {
+      showFinaleReport('end');
+    } else if (fm) {
+      const sk = 'wc_finale_seen_' + fm;
+      if (!localStorage.getItem(sk)) { showFinaleReport(fm); localStorage.setItem(sk, '1'); }
+    }
+}
+
+function escXML(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function scoreOf(m){
+  const s = cloudScores[String(m.id)] || cloudScores[String(m.id).replace(/^M/,'')] || cloudScores[Number(String(m.id).replace(/^M/,''))];
+  if (s) return { h: s.homeScore, a: s.awayScore, status: s.status };
+  return { h: m.homeScore, a: m.awayScore, status: m.status };
+}
+function initBracketZoom(){
+  const vp = document.querySelector('.bracket-viewport');
+  const z = document.querySelector('.bracket-zoom');
+  if (!vp || !z) return;
+  const st = { scale:1, x:0, y:0, startDist:0, startScale:1, startX:0, startY:0, midX:0, midY:0, panning:false, panStartX:0, panStartY:0, mode:null };
+  function apply(){ z.style.transform = `translate(${st.x}px, ${st.y}px) scale(${st.scale})`; }
+  apply();
+  vp.addEventListener('touchstart', e=>{
+    if (e.touches.length===2){
+      st.mode='pinch';
+      st.startDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      st.startScale = st.scale;
+      const r = vp.getBoundingClientRect();
+      st.midX = (e.touches[0].clientX+e.touches[1].clientX)/2 - r.left;
+      st.midY = (e.touches[0].clientY+e.touches[1].clientY)/2 - r.top;
+      st.startX = st.x; st.startY = st.y;
+    } else if (e.touches.length===1){
+      st.mode='pan';
+      st.panning = true;
+      st.panStartX = e.touches[0].clientX - st.x;
+      st.panStartY = e.touches[0].clientY - st.y;
+    }
+  }, {passive:false});
+  vp.addEventListener('touchmove', e=>{
+    if (st.mode==='pinch' && e.touches.length===2){
+      e.preventDefault();
+      const dist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+      const newScale = Math.max(1, Math.min(3.5, st.startScale * (dist/st.startDist)));
+      const ratio = newScale / st.startScale;
+      st.x = st.midX - (st.midX - st.startX) * ratio;
+      st.y = st.midY - (st.midY - st.startY) * ratio;
+      st.scale = newScale;
+      apply();
+    } else if (st.mode==='pan' && st.panning && e.touches.length===1){
+      e.preventDefault();
+      st.x = e.touches[0].clientX - st.panStartX;
+      st.y = e.touches[0].clientY - st.panStartY;
+      apply();
+    }
+  }, {passive:false});
+  vp.addEventListener('touchend', e=>{
+    if (e.touches.length===0){ st.mode=null; st.panning=false; }
+    else if (e.touches.length===1 && st.mode==='pinch'){
+      st.mode='pan'; st.panning=true;
+      st.panStartX = e.touches[0].clientX - st.x;
+      st.panStartY = e.touches[0].clientY - st.y;
+    }
+  });
+  window.bracketZoomIn = function(){ st.scale = Math.min(3.5, +(st.scale*1.25).toFixed(3)); apply(); };
+  window.bracketZoomOut = function(){ st.scale = Math.max(1, +(st.scale/1.25).toFixed(3)); apply(); };
+  window.bracketZoomReset = function(){ st.scale=1; st.x=0; st.y=0; apply(); };
+}
+function renderBracket(){
+  const wrap = document.getElementById('tab-bracket');
+  if (typeof MATCH_DATA === 'undefined'){ wrap.innerHTML = '<div class="empty-state"><p>赛程数据未加载</p></div>'; return; }
+
+  const W = 360, boxW = 74, boxH = 50, rowStep = 88, topPad = 28, botPad = 28;
+  const finalY = topPad + 3*rowStep + boxH/2;
+  const totalH = finalY + 3*rowStep + boxH/2 + botPad;
+
+  const findM = id => MATCH_DATA.find(m => String(m.id) === String(id)) || {id:id, home:'', away:'', homeCn:'待定', awayCn:'待定', homeFlag:'', awayFlag:'', phase:'', status:'upcoming', homeScore:null, awayScore:null};
+
+  const upperR16 = [89,90,93,94].map(findM);
+  const upperQF  = [97,98].map(findM);
+  const upperSF  = [101].map(findM);
+  const lowerSF  = [102].map(findM);
+  const lowerQF  = [99,100].map(findM);
+  const lowerR16 = [91,92,95,96].map(findM);
+  const final    = findM(104);
+
+  const rowR16upper = finalY - 3*rowStep;
+  const rowQFupper  = finalY - 2*rowStep;
+  const rowSFupper  = finalY - 1*rowStep;
+  const rowFinal    = finalY;
+  const rowSFlower  = finalY + 1*rowStep;
+  const rowQFlower  = finalY + 2*rowStep;
+  const rowR16lower = finalY + 3*rowStep;
+
+  const cx4 = [42, 126, 210, 294];
+  const cx2 = [84, 252];
+  const cx1 = [168];
+
+  function flagHTML(flag){
+    if (!flag) return '';
+    return `<img class="bk-flag" src="https://flagcdn.com/w40/${flag}.png" alt="" onerror="this.style.visibility='hidden'">`;
+  }
+  function boxHTML(m, cx, cy, isFinal){
+    const left = cx - boxW/2, top = cy - boxH/2;
+    const sc = scoreOf(m);
+    const hName = (m.homeCn && m.homeCn !== 'undefined') ? m.homeCn : '待定';
+    const aName = (m.awayCn && m.awayCn !== 'undefined') ? m.awayCn : '待定';
+    const finished = sc.status === 'finished';
+    let hWin=false, aWin=false;
+    if (finished && sc.h != null && sc.a != null && sc.h !== sc.a){ if(sc.h>sc.a)hWin=true; else aWin=true; }
+    const hCls = finished ? (hWin?'win':(sc.h===sc.a?'':'lose')) : '';
+    const aCls = finished ? (aWin?'win':(sc.a===sc.h?'':'lose')) : '';
+    const hScore = (sc.h!=null)?sc.h:'·';
+    const aScore = (sc.a!=null)?sc.a:'·';
+    const isTBD = (hName==='待定' && aName==='待定');
+    return `<div class="bk-box ${isFinal?'final':''} ${isTBD?'tbd':''}" style="left:${left}px;top:${top}px;width:${boxW}px;height:${boxH}px">`
+      + `<div class="bk-row ${hCls}">${flagHTML(m.homeFlag)}<span class="bk-name">${escXML(hName)}</span><span class="bk-score">${hScore}</span></div>`
+      + `<div class="bk-row ${aCls}">${flagHTML(m.awayFlag)}<span class="bk-name">${escXML(aName)}</span><span class="bk-score">${aScore}</span></div>`
+      + `</div>`;
+  }
+
+  function connector(fx1, fy1, fx2, fy2, cx, cy, direction){
+    const feederY = direction==='down' ? Math.max(fy1,fy2)+boxH/2 : Math.min(fy1,fy2)-boxH/2;
+    const childY  = direction==='down' ? cy-boxH/2 : cy+boxH/2;
+    const midY = (feederY + childY)/2;
+    return `<path class="bk-conn" d="M ${fx1} ${feederY} V ${midY}"/><path class="bk-conn" d="M ${fx2} ${feederY} V ${midY}"/><path class="bk-conn" d="M ${fx1} ${midY} H ${fx2}"/><path class="bk-conn" d="M ${cx} ${midY} V ${childY}"/>`;
+  }
+
+  let lines = '';
+  const mkLbl = (t, cy) => `<div class="bk-round-label" style="top:${cy-boxH/2-22}px">${t}</div>`;
+  lines += mkLbl('1/8决赛', rowR16upper);
+  lines += mkLbl('1/4决赛', rowQFupper);
+  lines += mkLbl('半决赛', rowSFupper);
+  lines += mkLbl('1/4决赛', rowQFlower);
+  lines += mkLbl('1/8决赛', rowR16lower);
+
+  const connSVG = `<svg class="bk-lines" width="${W}" height="${totalH}" viewBox="0 0 ${W} ${totalH}" xmlns="http://www.w3.org/2000/svg">`
+    + connector(cx4[0], rowR16upper, cx4[1], rowR16upper, cx2[0], rowQFupper, 'down')
+    + connector(cx4[2], rowR16upper, cx4[3], rowR16upper, cx2[1], rowQFupper, 'down')
+    + connector(cx2[0], rowQFupper, cx2[1], rowQFupper, cx1[0], rowSFupper, 'down')
+    + connector(cx1[0], rowSFupper, cx1[0], rowSFupper, cx1[0], rowFinal, 'down')
+    + connector(cx4[0], rowR16lower, cx4[1], rowR16lower, cx2[0], rowQFlower, 'up')
+    + connector(cx4[2], rowR16lower, cx4[3], rowR16lower, cx2[1], rowQFlower, 'up')
+    + connector(cx2[0], rowQFlower, cx2[1], rowQFlower, cx1[0], rowSFlower, 'up')
+    + connector(cx1[0], rowSFlower, cx1[0], rowSFlower, cx1[0], rowFinal, 'up')
+    + `</svg>`;
+
+  let boxes = '';
+  boxes += connSVG;
+  upperR16.forEach((m,i)=> boxes += boxHTML(m, cx4[i], rowR16upper));
+  upperQF.forEach((m,i)=> boxes += boxHTML(m, cx2[i], rowQFupper));
+  upperSF.forEach((m,i)=> boxes += boxHTML(m, cx1[i], rowSFupper));
+  boxes += boxHTML(final, cx1[0], rowFinal, true);
+  lowerSF.forEach((m,i)=> boxes += boxHTML(m, cx1[i], rowSFlower));
+  lowerQF.forEach((m,i)=> boxes += boxHTML(m, cx2[i], rowQFlower));
+  lowerR16.forEach((m,i)=> boxes += boxHTML(m, cx4[i], rowR16lower));
+  const thirdMatch = findM(103);
+  const cxThird = cx1[0] - boxW - 18;   // 季军赛框：决赛左侧同一行
+  boxes += boxHTML(thirdMatch, cxThird, rowFinal);
+  boxes += `<div class="bk-round-label" style="top:${rowFinal - boxH/2 - 22}px;left:${cxThird - 24}px">季军赛 ×6</div>`;
+  boxes += `<div class="bk-badge-final" style="left:${cx1[0]}px;top:${rowFinal - boxH/2 - 26}px">决赛</div>`;
+
+  wrap.innerHTML = `<div class="bracket-viewport"><div class="bracket-zoom" style="width:${W}px;height:${totalH}px">${boxes}</div></div>`;
+  initBracketZoom();
+}
+
+// ======== 登录 ========
+function onNickChange() {
+    const sel = document.getElementById('nickname-input');
+    const newRow = document.getElementById('new-name-row');
+    if (sel.value === '__new__') {
+        newRow.style.display = 'block';
+        document.getElementById('new-name-input').focus();
+    } else {
+        newRow.style.display = 'none';
+    }
+}
+
+function login() {
+    const sel = document.getElementById('nickname-input');
+    let n = sel.value;
+    if (n === '__new__') {
+        n = document.getElementById('new-name-input').value.trim();
+        if (!n || n.length < 2) { showToast('昵称至少2个字 😊'); return; }
+        if (n === 'null' || n === 'undefined') { showToast('这个昵称不行 😅'); return; }
+    }
+    if (!n) { showToast('请选择你的名字 😊'); return; }
+    localStorage.setItem('wc_nickname', n);
+    // 记录已知用户，供登录下拉动态显示（新人刷新后也能选到自己）
+    try {
+        const ku = JSON.parse(localStorage.getItem('wc_known_users') || '[]');
+        if (!ku.includes(n)) { ku.push(n); localStorage.setItem('wc_known_users', JSON.stringify(ku)); }
+    } catch(e){}
+    initMain(n);
+}
+function checkLogin() {
+    const n = localStorage.getItem('wc_nickname');
+    // 任何合法昵称（白名单内/外、含新人）都直接进；昵称已持久保存，不再删除
+    if (n && n !== 'null' && n !== 'undefined' && n.length >= 2) {
+        initMain(n);
+    }
+}
+
+// 动态把 npoint 实际用户名 + 本地已知用户 补充进登录下拉（新人刷新后也能选到自己）
+function refreshUserOptions() {
+    const sel = document.getElementById('nickname-input');
+    if (!sel) return;
+    const existing = new Set([...sel.options].map(o => o.value).filter(v => v && v !== '__new__'));
+    const add = (name) => {
+        if (!name || name === 'null' || name === 'undefined' || name.includes('�')) return;
+        if (existing.has(name)) return;
+        const opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        const anchor = sel.querySelector('option[value="__new__"]');
+        if (anchor) sel.insertBefore(opt, anchor); else sel.appendChild(opt);
+        existing.add(name);
+    };
+    // 1) 本地已知用户（不依赖 npoint 加载时机）
+    try { JSON.parse(localStorage.getItem('wc_known_users') || '[]').forEach(add); } catch(e){}
+    // 2) npoint 里实际提交过的用户名
+    if (typeof allPreds !== 'undefined' && allPreds) allPreds.forEach(p => { if (p.userName) add(p.userName); });
+}
+function initMain(name) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+    document.getElementById('current-user').textContent = name;
+    document.getElementById('avatar-char').textContent = name.charAt(0).toUpperCase();
+
+    layoutChrome();        // 登录后顶/底栏已显示，测准高度写入 CSS 变量
+    initContentZoom();     // 绑定中部双指缩放（图片式 transform，仅绑一次）
+
+    // 先载入同源快照（data.js 的 WC_NPOINT_RAW），保证即使微信内拉不到 npoint 也显示真实数据
+    if (typeof WC_NPOINT_RAW !== 'undefined') {
+        try { applyData(WC_NPOINT_RAW); } catch (e) { console.warn('快照载入失败:', e); }
+    }
+    mergeScores();
+    loadMatches(); loadMyPredictions(); loadLeaderboard(); updatePlayerCount();
+    document.getElementById('update-text').textContent = '本地数据 · 点击刷新';
+
+    syncAll(true);   // 首屏静默后台同步：界面已用本地快照渲染，绝不被同步卡住
+    // 已取消自动刷新，用户手动点「刷新数据」即可
+}
+
+function changeNickname() {
+    if (!confirm('更换昵称不会影响你之前提交的预测数据。确定要更换吗？')) return;
+    localStorage.removeItem('wc_nickname');
+    document.getElementById('main-app').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('nickname-input').selectedIndex = 0;
+    document.getElementById('nickname-input').focus();
+}
+
+// ======== 标签页 ========
+let currentTab = 'matches';
+let cScale = 1, cTx = 0, cTy = 0;
+function layoutChrome() {
+    const h = document.querySelector('.header');
+    const t = document.querySelector('.tabs');
+    if (h) document.documentElement.style.setProperty('--hh', h.offsetHeight + 'px');
+    if (t) document.documentElement.style.setProperty('--th', t.offsetHeight + 'px');
+}
+function resetContentZoom() {
+    cScale = 1; cTx = 0; cTy = 0;
+    const zi = document.getElementById('zoom-inner');
+    if (zi) { zi.style.transform = 'none'; zi.style.transformOrigin = '0 0'; }
+    const cl = document.getElementById('content-layer');
+    if (cl) { cl.scrollLeft = 0; cl.scrollTop = 0; }
+}
+function initContentZoom() {
+    layoutChrome();                       // 每次都测顶/底栏高度（登录后 main-app 已显示，测得准）
+    if (window.__czInited) return;       // touch 监听只绑一次
+    window.__czInited = true;
+    window.addEventListener('resize', layoutChrome);
+    const cl = document.getElementById('content-layer');
+    const zi = document.getElementById('zoom-inner');
+    if (!cl || !zi) return;
+    const MAX = 3.5;
+    // 图片式统一缩放：用 transform: scale（不改布局、不重排字体段落），整块按比例放大
+    function applyT() {
+        zi.style.transformOrigin = '0 0';
+        zi.style.transform = `translate(${cTx}px, ${cTy}px) scale(${cScale})`;
+    }
+    function clampT() {
+        const r = cl.getBoundingClientRect();
+        const iw = zi.offsetWidth * cScale, ih = zi.offsetHeight * cScale;
+        if (iw <= r.width) cTx = 0; else cTx = Math.max(r.width - iw, Math.min(0, cTx));
+        if (ih <= r.height) cTy = 0; else cTy = Math.max(r.height - ih, Math.min(0, cTy));
+    }
+    let startDist = 0, startScale = 1, startTx = 0, startTy = 0, focalX = 0, focalY = 0;
+    let panning = false, panX = 0, panY = 0, panTx = 0, panTy = 0;
+    cl.addEventListener('touchstart', e => {
+        if (currentTab === 'bracket') return;       // 对阵走自身缩放
+        if (e.touches.length === 2) {
+            const r = cl.getBoundingClientRect();
+            startDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            // 把当前滚动位置并入平移基准后再清滚动，保证视觉连续不跳变
+            cTy = cTy - cl.scrollTop; cl.scrollTop = 0;
+            startScale = cScale; startTx = cTx; startTy = cTy;
+            focalX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left;
+            focalY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top;
+        } else if (e.touches.length === 1 && cScale > 1) {
+            panning = true; panX = e.touches[0].clientX; panY = e.touches[0].clientY; panTx = cTx; panTy = cTy;
+        }
+    }, { passive: false });
+    cl.addEventListener('touchmove', e => {
+        if (currentTab === 'bracket') return;
+        if (panning && e.touches.length === 1 && cScale > 1) {
+            e.preventDefault();
+            cTx = panTx + (e.touches[0].clientX - panX);
+            cTy = panTy + (e.touches[0].clientY - panY);
+            clampT(); applyT();
+        } else if (e.touches.length === 2 && startDist > 0) {
+            e.preventDefault();
+            const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            const ns = Math.max(1, Math.min(MAX, startScale * (dist / startDist)));
+            // 以双指中点为焦点，缩放后该点保持不动
+            cTx = focalX - ((focalX - startTx) / startScale) * ns;
+            cTy = focalY - ((focalY - startTy) / startScale) * ns;
+            cScale = ns;
+            clampT(); applyT();
+        }
+    }, { passive: false });
+    cl.addEventListener('touchend', e => {
+        if (e.touches.length === 0) {
+            panning = false; startDist = 0;
+            if (cScale <= 1.001) { cScale = 1; cTx = 0; cTy = 0; applyT(); }
+        } else if (e.touches.length === 1) {
+            panning = false;
+        }
+    });
+}
+function switchTab(name, el) {
+    currentTab = name;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+    resetContentZoom();
+    if (name === 'matches') loadMatches();
+    if (name === 'my-predictions') loadMyPredictions();
+    if (name === 'leaderboard') loadLeaderboard();
+    if (name === 'bracket') renderBracket();
+}
+
+// ======== 工具 ========
+function cnName(en) {
+    const md = MATCH_DATA.find(x => x.home === en || x.away === en);
+    if (md) return md.home === en ? md.homeCn : md.awayCn;
+    return CN_NAMES[en] || en;
+}
+function flagImg(nameEn, size) {
+    const m = matches.find(x => x.home === nameEn || x.away === nameEn);
+    const flagCode = m ? (m.home === nameEn ? m.homeFlag : m.awayFlag) : '';
+    if (flagCode) return `<img src="https://flagcdn.com/w40/${flagCode}.png" class="team-flag" style="height:${size||28}px" alt="${nameEn}" onerror="this.style.display='none'">`;
+    const md = MATCH_DATA.find(x => x.home === nameEn || x.away === nameEn);
+    const fc = md ? (md.home === nameEn ? md.homeFlag : md.awayFlag) : '';
+    if (fc) return `<img src="https://flagcdn.com/w40/${fc}.png" class="team-flag" style="height:${size||28}px" alt="${nameEn}" onerror="this.style.display='none'">`;
+    return `<span style="font-size:${size||28}px">🏳️</span>`;
+}
+function flagImgSm(nameEn) { return flagImg(nameEn, 24); }
+function getTodayStr() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function getTomorrowStr() { const d = new Date(); d.setDate(d.getDate()+1); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function getDateStr(dateStr) { return dateStr.split(' ')[0]; }
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ======== 今日赛程页 ========
+const RECENT_N = 4;
+
+function loadMatches() {
+    const container = document.getElementById('tab-matches');
+    const me = localStorage.getItem('wc_nickname');
+    const preds = allPreds;
+    const todayStr = getTodayStr();
+    const tomorrowStr = getTomorrowStr();
+
+    if (!matches.length) {
+        container.innerHTML = '<div class="loading"><div class="spinner"></div><p style="color:#aaa; font-size:13px;">等待数据加载...</p></div>';
+        return;
+    }
+
+    const finished = matches.filter(m => m.status === 'finished').sort((a,b) => new Date(b.date) - new Date(a.date));
+
+    // 显示：直播中 + 今天 + 明天的比赛；不显示后天及以后的
+    const openMatches = matches.filter(m => {
+        if (m.status === 'finished') return false;
+        if (m.status === 'live') return true;  // 直播中始终显示
+        const dateStr = getDateStr(m.date);
+        return dateStr === todayStr || dateStr === tomorrowStr;
+    }).sort((a,b) => new Date(a.date) - new Date(b.date));
+
+    const laterCount = matches.filter(m => {
+        if (m.status === 'finished' || m.status === 'live') return false;
+        return getDateStr(m.date) > tomorrowStr;
+    }).length;
+
+    let html = '';
+
+    if (finished.length > 0) {
+        const recent = finished.slice(0, RECENT_N);
+        const older = finished.slice(RECENT_N);
+        html += `<div class="section-title">最近赛果 <span class="section-count">共${finished.length}场</span></div>`;
+        html += recent.map(m => finishedCard(m, preds, me)).join('');
+        if (older.length > 0) {
+            html += `<div class="history-toggle-btn" onclick="toggleHistory(this)">▾ 展开更早赛果（${older.length}场）</div>
+                     <div class="history-section" style="display:none">${older.map(m => finishedCard(m, preds, me)).join('')}</div>`;
+        }
+    }
+
+    if (openMatches.length > 0) {
+        // 分段标题
+        const liveCount = openMatches.filter(m => m.status === 'live').length;
+        const todayCount = openMatches.filter(m => m.status !== 'live' && getDateStr(m.date) === todayStr).length;
+        const tomorrowCount = openMatches.filter(m => getDateStr(m.date) === tomorrowStr).length;
+        let titleParts = [];
+        if (liveCount > 0) titleParts.push(`🔴 直播中 ${liveCount}场`);
+        if (todayCount > 0) titleParts.push(`今日 ${todayCount}场`);
+        if (tomorrowCount > 0) titleParts.push(`明日 ${tomorrowCount}场`);
+        html += `<div class="section-title">比赛场次 <span class="section-count">${openMatches.length}场 · ${titleParts.join(' / ')}</span></div>`;
+        html += openMatches.map(m => upcomingCard(m, preds, me)).join('');
+    } else {
+        html += `<div style="text-align:center; padding:18px; background:white; border-radius:12px; margin-bottom:12px; font-size:13px; color:#bbb; box-shadow:0 1px 4px rgba(0,0,0,.06);">暂无可预测的比赛</div>`;
+    }
+
+    if (laterCount > 0) {
+        html += `<div style="text-align:center; padding:12px; color:#bbb; font-size:12px;">后续还有 ${laterCount} 场比赛（后天及以后）</div>`;
+    }
+
+    container.innerHTML = html;
+}
+
+function toggleHistory(el) {
+    const sec = el.nextElementSibling;
+    const open = sec.style.display !== 'block';
+    sec.style.display = open ? 'block' : 'none';
+    el.textContent = open ? '▴ 收起早期赛果' : `▾ 展开更早赛果`;
+}
+function togglePreds(id, el) {
+    const el2 = document.getElementById(id);
+    const open = el2.classList.toggle('open');
+    el.textContent = open ? '▴ 收起' : '▾ 展开全员预测';
+}
+
+// 已结束卡片
+function finishedCard(m, preds, me) {
+    const all = preds.filter(p => String(p.matchId).replace(/^M/,'') === String(m.id));
+    const myP = all.find(p => p.userName === me);
+    const pid = 'ap_' + m.id;
+
+    let myRow = '';
+    if (myP && myP.homePred != null) {
+        const pts = myP.points;
+        const perfect = isPerfectPred(myP, m);
+        const ptsColor = pts >= 8 ? '#2e7d32' : pts >= 5 ? '#1b5e20' : pts >= 3 ? '#ef6c00' : pts >= 2 ? '#1565c0' : '#9e9e9e';
+        const label = (perfect ? '⭐ ' : '') + (pts !== null ? pts + '分' : (perfect ? '完美' : '计算中'));
+        const badgeCls = perfect ? 'pts-badge pts-perfect' : 'pts-badge';
+        const badgeStyle = perfect ? '' : `style="background:${pts !== null ? ptsColor + '22' : '#f5f5f5'}; color:${ptsColor}; border: 1px solid ${pts !== null ? ptsColor + '44' : '#ddd'};"`;
+        const peekC = peekCostForMatch(m.id, me);
+        const deductHtml = peekC > 0 ? `<div class="peek-deduct">🔍偷看 -${peekC}${pts !== null ? '　净得 ' + (pts - peekC) + '分' : ''}</div>` : '';
+        // X因素分 badge（与预测分并列展示为「X+Y」）
+        let xBadge = '';
+        if (m.xFactors && m.xFactors.length && myP.xChoices) {
+            const xp = (typeof myP.xPoints === 'number' && !isNaN(myP.xPoints)) ? myP.xPoints : null;
+            if (xp !== null) {
+                xBadge = `<span class="pts-badge" style="background:${xp>=0?'#2e7d3222':'#c6282822'}; color:${xp>=0?'#2e7d32':'#c62828'}; border:1px solid ${xp>=0?'#2e7d3244':'#c6282844'}; margin-left:6px;">X${xp>0?'+':''}${xp}</span>`;
+            } else {
+                xBadge = `<span class="pts-badge" style="background:#f5f5f5; color:#999; border:1px solid #ddd; margin-left:6px;">X待结算</span>`;
+            }
+        }
+        myRow = `<div class="my-result-row">
+            <div class="my-pred-text">📝 赛前：<strong>${myP.homePred} : ${myP.awayPred}</strong>${perfect ? ' <span style="color:#f59e0b; font-weight:700;">⭐完美</span>' : ''}</div>
+            <div class="my-pred-badges"><span class="${badgeCls}"${badgeStyle}>${label}</span>${xBadge}</div>
+        </div>${deductHtml}`;
+    } else {
+        const peekC = peekCostForMatch(m.id, me);
+        myRow = `<div class="my-result-row"><span class="pts-noentry">—— 赛前未参与 ——</span></div>` + (peekC>0 ? `<div class="peek-deduct">🔍偷看 -${peekC}</div>` : '');
+    }
+
+    // X因素附加题结算展示
+    let xResultHtml = '';
+    if (m.xFactors && m.xFactors.length && myP && myP.xChoices) {
+        const outcomes = m.xOutcomes || {};
+        const xpTotal = (typeof myP.xPoints === 'number' && !isNaN(myP.xPoints)) ? myP.xPoints : null;
+        xResultHtml = `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed #e0c9a0;">
+            <div style="font-size:11px;color:#e65100;font-weight:600;margin-bottom:6px;">🎲 X因素附加题${xpTotal!=null?` · 合计 ${xpTotal>0?'+':''}${xpTotal} 分`:'（待结算）'}</div>
+            ${m.xFactors.map(xf => {
+                const myIdx = myP.xChoices[xf.id];
+                const answered = (myIdx != null);
+                const myAns = (answered && xf.opts[myIdx] != null) ? xf.opts[myIdx] : '未选';
+                const correctIdx = outcomes[xf.id];
+                const settled = correctIdx != null;
+                const correctAns = settled ? xf.opts[correctIdx] : '';
+                let mark, color, ansHtml;
+                if (!answered) {
+                    // 未答题：不计分，中性展示，绝不显示 ✅/❌ 与加减分
+                    mark = '➖'; color = '#999';
+                    ansHtml = settled ? `未答 · 不计分｜答案:${correctAns}` : '未答 · 不计分';
+                } else if (!settled) {
+                    mark = '⏳'; color = '#999';
+                    ansHtml = `我选:${myAns}`;
+                } else if (Number(myIdx) === Number(correctIdx)) {
+                    mark = '✅'; color = '#2e7d32';
+                    ansHtml = `我选:${myAns}｜答案:${correctAns} +${xf.win}`;
+                } else {
+                    mark = '❌'; color = '#c62828';
+                    ansHtml = `我选:${myAns}｜答案:${correctAns} ${xf.lose}`;
+                }
+                return `<div style="display:flex;justify-content:space-between;align-items:flex-start;font-size:12px;margin-bottom:4px;gap:6px;">
+                    <span style="color:#666;flex:1;">${mark} ${xf.q}</span>
+                    <span style="color:${color};white-space:nowrap;font-weight:600;">${ansHtml}</span>
+                </div>`;
+            }).join('')}
+        </div>`;
+    }
+
+    const allRow = all.length > 0 ? `
+        <div class="all-preds-btn" onclick="togglePreds('${pid}', this)">▾ 展开全员预测（${all.length}人）</div>
+        <div class="all-preds-list" id="${pid}">
+            ${all.sort((a,b)=>((b.points||0)+((b.xPoints!=null&&!isNaN(b.xPoints))?b.xPoints:0))-((a.points||0)+((a.xPoints!=null&&!isNaN(a.xPoints))?a.xPoints:0))).map(p => {
+                const perfect = isPerfectPred(p, m);
+                const ptsColorAll = p.points >= 8 ? '#2e7d32' : p.points >= 5 ? '#1b5e20' : p.points >= 3 ? '#ef6c00' : p.points >= 2 ? '#1565c0' : (p.points !== null ? '#9e9e9e' : '#ccc');
+                const c = perfect ? '' : 'color:#333';
+                const predStr = p.homePred != null ? `${p.homePred}:${p.awayPred}` : '-';
+                const ptsTxt = p.points !== null ? (perfect ? '⭐' + p.points + '分' : p.points + '分') : '-';
+                let xBadgeAll = '';
+                if (m.xFactors && m.xFactors.length && p.xChoices) {
+                    const xp = (typeof p.xPoints==='number' && !isNaN(p.xPoints)) ? p.xPoints : null;
+                    if (xp !== null) {
+                        xBadgeAll = `<span style="background:${xp>=0?'#2e7d3222':'#c6282822'}; color:${xp>=0?'#2e7d32':'#c62828'}; border:1px solid ${xp>=0?'#2e7d3244':'#c6282844'}; padding:1px 6px; border-radius:10px; font-size:11px; margin-left:5px; white-space:nowrap;">X${xp>0?'+':''}${xp}</span>`;
+                    } else {
+                        xBadgeAll = `<span style="background:#f5f5f5; color:#999; border:1px solid #ddd; padding:1px 6px; border-radius:10px; font-size:11px; margin-left:5px; white-space:nowrap;">X待结算</span>`;
+                    }
+                }
+                return `<div style="padding:4px 0;border-bottom:1px solid #f5f5f5;">
+                    <div class="pred-row-item">
+                        <span class="pri-name">${p.userName===me?'👤 ':''}${p.userName}</span>
+                        <span class="pri-score">${predStr}</span>
+                        <span class="pri-pts ${perfect ? 'pts-perfect' : ''}" style="${c}">${ptsTxt}</span>${xBadgeAll}
+                    </div>
+                    ${renderXfChoices(m, p.xChoices, true)}
+                </div>`;
+            }).join('')}
+        </div>` : '';
+
+    // 留言区
+    const cmtId = 'cmt_s_' + m.id;
+    const matchComments = allComments.filter(c => String(c.matchId).replace(/^M/,'') === String(m.id)).sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const cmtListHtml = matchComments.length > 0 ? matchComments.map(c => {
+        const t = new Date(c.createdAt).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+        return `<div class="comment-item">
+            <span class="comment-name">${c.userName}</span><span class="comment-text">${c.text}</span><span class="comment-time">${t}</span>
+        </div>`;
+    }).join('') : '<div style="text-align:center; font-size:12px; color:#bbb; padding:6px;">暂无留言</div>';
+    const cmtSection = `<div class="comment-toggle" data-cmt-count="${matchComments.length}" onclick="toggleComments('${cmtId}', this)">💬 留言${matchComments.length?' ('+matchComments.length+')':''}</div>
+        <div class="comment-section" id="${cmtId}">
+            <div class="comment-list">${cmtListHtml}</div>
+            <div class="comment-input-row">
+                <input type="text" id="cmt-${m.id}" placeholder="说点什么..." maxlength="50" onkeydown="if(event.key==='Enter')submitComment(${m.id})">
+                <button onclick="submitComment(${m.id})">发送</button>
+            </div>
+            <div class="comment-hint">50字以内，每次间隔20秒</div>
+        </div>`;
+
+    const roundLabel = m.group;
+
+    return `<div class="match-card">
+        <div class="match-time-row">
+            <span class="match-time-text">${m.date}（北京时）</span>
+            <span class="status-badge status-finished">已结束</span>
+            ${roundLabel ? `<span style="font-size:11px; color:#aaa; margin-left:auto;">${roundLabel}</span>` : ''}
+        </div>
+        <div class="result-score-row">
+            <div class="r-team">${flagImgSm(m.home)}<div class="r-name">${m.home}</div><div class="r-name-cn">${cnName(m.home)}</div></div>
+            <div class="r-scorebox"><span class="r-num">${m.homeScore}</span><span class="r-div">:</span><span class="r-num">${m.awayScore}</span></div>
+            <div class="r-team">${flagImgSm(m.away)}<div class="r-name">${m.away}</div><div class="r-name-cn">${cnName(m.away)}</div></div>
+        </div>
+        ${myRow}
+        ${xResultHtml}
+        ${allRow}
+        ${cmtSection}
+    </div>`;
+}
+
+// 可预测卡片
+// ======== X因素附加题选择预览（我的预测 / 偷看他人 复用）========
+function renderXfChoices(m, xChoices, compact) {
+    if (!m || !m.xFactors || !m.xFactors.length) return '';
+    if (!xChoices) xChoices = {};
+    const circ = ['①','②','③','④','⑤','⑥'];
+    if (compact) {
+        const parts = m.xFactors.map((xf, i) => {
+            const idx = xChoices[xf.id];
+            // hideChoices=true 的题：公开列表里不暴露大家的选项
+            const ans = xf.hideChoices ? '🤫 保密' : ((idx != null && xf.opts[idx] != null) ? xf.opts[idx] : '未选');
+            return `${circ[i] || (i+1)} ${ans}`;
+        });
+        return `<div style="font-size:11px;color:#e65100;margin-top:3px;padding-left:2px;">🎲 ${parts.join('　')}</div>`;
+    }
+    return `<div style="margin-top:7px;padding-top:7px;border-top:1px dashed #f0d9b0;font-size:11px;">
+        <span style="font-weight:600;color:#e65100;">🎲 X因素附加题</span>
+        ${m.xFactors.map((xf, i) => {
+            const idx = xChoices[xf.id];
+            const ans = (idx != null && xf.opts[idx] != null) ? xf.opts[idx] : '未选';
+            return `<div style="margin-top:3px;color:#666;">${circ[i] || (i+1)} ${xf.q}：<strong style="color:#333;">${ans}</strong></div>`;
+        }).join('')}
+    </div>`;
+}
+
+function upcomingCard(m, preds, me) {
+    const all = preds.filter(p => String(p.matchId).replace(/^M/,'') === String(m.id));
+    const myP = all.find(p => String(p.matchId).replace(/^M/,'') === String(m.id) && p.userName === me);
+    const matchTime = new Date(m.date.replace(' ', 'T'));
+    const now = new Date();
+    const minsLeft = (matchTime - now) / 60000;
+    const isLocked = minsLeft < LOCK_MINUTES;
+    const modifyLeft = myP ? (3 - (myP.modifyCount || 0)) : 3;
+    const canInput = !isLocked && modifyLeft > 0;
+    const isToday = getDateStr(m.date) === getTodayStr();
+    const isLive = m.status === 'live';
+
+    let badge;
+    if (isLive) badge = `<span class="status-badge status-live">🔴 直播中</span>`;
+    else if (isLocked) badge = `<span class="status-badge status-locked">⏰ 已锁定</span>`;
+    else badge = `<span class="status-badge status-upcoming">✏️ 可预测</span>`;
+
+    const roundLabel = m.group;
+    const dayLabel = isToday ? '今日' : '明日';
+
+    const myPredShow = (myP && myP.homePred != null) ? `<div class="my-pred-info">
+        <div>
+            <div class="pred-score-show">📝 赛前预测：<strong>${myP.homePred} : ${myP.awayPred}</strong></div>
+            ${canInput
+                ? `<div class="modify-hint">还可修改 ${modifyLeft} 次</div>`
+                : isLocked
+                    ? `<div class="modify-hint warn">已锁定，赛后公布积分</div>`
+                    : `<div class="modify-hint warn">修改次数已用完</div>`}
+        </div>
+        ${renderXfChoices(m, myP.xChoices)}
+    </div>` : '';
+
+    // X因素附加题表单（仅当本场配置了 xFactors 且可输入时显示；可跳过、可再点取消）
+    const myXC = (myP && myP.xChoices) ? myP.xChoices : {};
+    const xFactorForm = (canInput && m.xFactors && m.xFactors.length) ? (() => {
+        m.xFactors.forEach(xf => { if (myXC[xf.id] != null) xfSel[m.id + '-' + xf.id] = myXC[xf.id]; });
+        return `<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px dashed #e0c9a0;">
+            <div style="font-size:12px;color:#e65100;font-weight:600;margin-bottom:4px;">🎲 X因素附加题 · 答对加分／答错扣分（独立计入总分）</div>
+            <div style="font-size:11px;color:#999;margin-bottom:8px;">每题可跳过(不答不加减) ｜ 已选项再点一次可取消</div>
+            ${m.xFactors.map(xf => `<div style="margin-bottom:12px;">
+                <div style="font-size:13px;color:#333;margin-bottom:5px;">${xf.q} <span style="color:#999;font-size:11px;">(对+${xf.win}／错${xf.lose})</span></div>
+                <div style="display:flex;gap:8px;">
+                    ${xf.opts.map((op,i) => {
+                        const sel = (myXC[xf.id] != null && Number(myXC[xf.id]) === i);
+                        return `<div id="xf-${m.id}-${xf.id}-${i}" class="xf-opt${sel?' xf-opt-sel':''}" onclick="toggleXf('${m.id}',${xf.id},${i})">${op}</div>`;
+                    }).join('')}
+                </div>
+            </div>`).join('')}
+        </div>`;
+    })() : '';
+
+    const inputArea = canInput ? `<div class="pred-input-area">
+        ${xFactorForm}
+        <div class="pred-row">
+            <input type="number" id="h-${m.id}" placeholder="0" value="${myP?myP.homePred:''}" min="0" max="20">
+            <span class="colon-div">:</span>
+            <input type="number" id="a-${m.id}" placeholder="0" value="${myP?myP.awayPred:''}" min="0" max="20">
+            <button class="btn-submit" onclick="submitPred(${m.id})">${myP?'修改预测':'提交预测'}</button>
+        </div>
+    </div>` : (isLocked && (!myP || myP.homePred == null)) ? `<div style="text-align:center; font-size:12px; color:#f57c00; margin-top:10px; padding-top:10px; border-top:1px solid #f5f5f5;">赛前预测已截止</div>` : '';
+
+    const pid = 'ap_' + m.id;
+    let othersRow;
+    if (isLocked || m.status === 'live') {
+        // 锁定后/直播中：正常显示人名+真实比分
+        othersRow = all.length > 0 ? `
+        <div class="all-preds-btn" onclick="togglePreds('${pid}', this)">▾ 查看预测情况（${all.length}人）</div>
+        <div class="all-preds-list" id="${pid}">
+            ${all.sort((a,b) => (a.userName===me?-1:b.userName===me?1:0)).map(p => {
+                const isMe = p.userName === me;
+                const predStr = p.homePred != null ? `${p.homePred} : ${p.awayPred}` : '未预测';
+                return `<div style="padding:4px 0;border-bottom:1px solid #f3f3f3;">
+                    <div class="pred-row-item">
+                        <span class="pri-name">${isMe?'👤 ':''}${p.userName}${isMe?' (我)':''}</span>
+                        <span class="pri-score">${predStr}</span>
+                        <span class="pri-pts" style="color:#999">已提交</span>
+                    </div>
+                    ${renderXfChoices(m, p.xChoices, true)}
+                </div>`;
+            }).join('')}
+        </div>` : '<div style="text-align:center; font-size:12px; color:#bbb; margin-top:8px; padding-top:8px; border-top:1px solid #f5f5f5;">暂无人预测</div>';
+    } else {
+        // 锁定前：显示人名列表 + 比分分布汇总，人名与比分不关联
+        const nameList = all.map(p => {
+            const isMe = p.userName === me;
+            return isMe ? `👤 ${p.userName}（我）` : `✅ ${p.userName}`;
+        }).join('　'); // 全角空格分隔
+
+        // 判断是否为四分之一决赛及以上阶段（这些阶段隐藏比分分布）
+        const hideScorePhases = ['四分之一决赛', '半决赛', '季军赛', '决赛'];
+        const isHighKnockout = hideScorePhases.includes(m.phase);
+
+        let distHtml;
+        if (isHighKnockout) {
+            // 四分之一决赛及以上：隐藏比分分布，只显示提示
+            distHtml = `<span style="color:#f57c00;font-size:11px;">🔒 预测比分不显示，预测锁定后显示</span>`;
+        } else {
+            // 小组赛/十六分之一/八分之一：正常显示比分分布
+            const scoreCounts = {};
+            all.forEach(p => {
+                if (p.homePred != null) {
+                    const key = `${p.homePred}:${p.awayPred}`;
+                    scoreCounts[key] = (scoreCounts[key] || 0) + 1;
+                }
+            });
+            const distribution = Object.entries(scoreCounts)
+                .sort((a,b) => b[1] - a[1])
+                .map(([score, count]) => `${score}（${count}人）`)
+                .join('　');
+
+            // 满3人才显示比分分布，否则显示提示
+            distHtml = all.length >= 3
+                ? `预测分布：${distribution || '暂无'}`
+                : `<span style="color:#f57c00;font-size:11px;">⏳ 待${3 - all.length}人预测后统计</span>`;
+        }
+        if (m.reveal || hasPeeked(m.id, me)) {
+            // 已偷看 / 决赛全员公开：解锁人名对应真实比分
+            const freeReveal = m.reveal && !hasPeeked(m.id, me);
+            const revealList = all.length > 0 ? all.sort((a,b)=>(a.userName===me?-1:b.userName===me?1:0)).map(p => {
+                const isMe = p.userName === me;
+                const predStr = p.homePred != null ? `${p.homePred} : ${p.awayPred}` : '未预测';
+                return `<div style="padding:4px 0;border-bottom:1px solid #f3e6cf;">
+                    <div class="pred-row-item">
+                        <span class="pri-name">${isMe?'👤 ':''}${p.userName}${isMe?' (我)':''}</span>
+                        <span class="pri-score">${predStr}</span>
+                        <span class="pri-pts" style="color:#b8860b;font-size:11px;">🔍</span>
+                    </div>
+                    ${renderXfChoices(m, p.xChoices, true)}
+                </div>`;
+            }).join('') : '<div style="text-align:center;font-size:12px;color:#bbb;">暂无人预测</div>';
+            othersRow = `<div class="pred-anonymous">
+                <div class="pred-names">已预测：${nameList}</div>
+                <div class="peek-tip">${freeReveal ? '🔓 最后一局预测公开，各自算分~' : '已花 ' + peekCostForMatch(m.id, me) + ' 分 · 参考本场其他人预测'}</div>
+                <div class="peek-revealed">${revealList}</div>
+            </div>`;
+        } else {
+            const cost = getPeekCost(m);
+            const canPeek = me && me !== 'null';
+            // 偷看按钮与「本人是否预测」无关，锁定前、有他人预测即可出现（猜球前就能偷看）
+            const peekBtnHtml = (all.length > 0 && canPeek)
+                ? `<div class="peek-cost-hint">花 ${cost} 分 · 从本场结算扣除</div>
+                   <button class="peek-btn" onclick="submitPeek('${m.id}')">偷看？偷看？猜球能算偷吗？</button>`
+                : '';
+            othersRow = `<div class="pred-anonymous">
+                <div class="pred-names">已预测：${nameList}</div>
+                <div class="pred-distribution">${distHtml}</div>
+                ${peekBtnHtml}
+            </div>`;
+        }
+    }
+
+    // 留言区
+    const cmtId = 'cmt_s_' + m.id;
+    const matchComments = allComments.filter(c => String(c.matchId).replace(/^M/,'') === String(m.id)).sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const cmtListHtml = matchComments.length > 0 ? matchComments.map(c => {
+        const t = new Date(c.createdAt).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+        return `<div class="comment-item">
+            <span class="comment-name">${c.userName}</span><span class="comment-text">${c.text}</span><span class="comment-time">${t}</span>
+        </div>`;
+    }).join('') : '<div style="text-align:center; font-size:12px; color:#bbb; padding:6px;">暂无留言</div>';
+    const cmtSection = `<div class="comment-toggle" data-cmt-count="${matchComments.length}" onclick="toggleComments('${cmtId}', this)">💬 留言${matchComments.length?' ('+matchComments.length+')':''}</div>
+        <div class="comment-section" id="${cmtId}">
+            <div class="comment-list">${cmtListHtml}</div>
+            <div class="comment-input-row">
+                <input type="text" id="cmt-${m.id}" placeholder="说点什么..." maxlength="50" onkeydown="if(event.key==='Enter')submitComment(${m.id})">
+                <button onclick="submitComment(${m.id})">发送</button>
+            </div>
+            <div class="comment-hint">50字以内，每次间隔20秒</div>
+        </div>`;
+
+    return `<div class="match-card">
+        <div class="match-time-row">
+            <span class="bj-time">${m.date}</span>
+            <span style="font-size:11px; color:#bbb;">${dayLabel} 北京时</span>
+            ${badge}
+            ${roundLabel ? `<span style="font-size:11px; color:#aaa; margin-left:auto;">${roundLabel}</span>` : ''}
+        </div>
+        <div class="teams-row">
+            <div class="team">${flagImg(m.home)}<div class="team-name">${m.home}</div><div class="team-name-cn">${cnName(m.home)}</div></div>
+            <span class="vs-badge">VS</span>
+            <div class="team">${flagImg(m.away)}<div class="team-name">${m.away}</div><div class="team-name-cn">${cnName(m.away)}</div></div>
+        </div>
+        ${myPredShow}
+        ${inputArea}
+        ${othersRow}
+        ${cmtSection}
+    </div>`;
+}
+
+// ======== 提交预测 ========
+async function submitPred(matchId) {
+    const h = document.getElementById('h-' + matchId).value;
+    const a = document.getElementById('a-' + matchId).value;
+    if (h === '' || a === '') { showToast('请填写完整比分 ✏️'); return; }
+    if (parseInt(h) < 0 || parseInt(a) < 0) { showToast('比分不能为负'); return; }
+
+    // 收集X因素附加题的选择（可跳过：未选的不计入，不拦截）
+    let xChoices = null;
+    const md = MATCH_DATA.find(x => String(x.id).replace(/^M/,'') === String(matchId));
+    if (md && md.xFactors && md.xFactors.length) {
+        xChoices = {};
+        let picked = 0;
+        md.xFactors.forEach(xf => {
+            const v = xfSel[matchId + '-' + xf.id];
+            if (v != null) { xChoices[xf.id] = Number(v); picked++; }
+        });
+        if (picked === 0) xChoices = null; // 一道都没选则不写入
+    }
+
+    const ok = await submitPredToBackend(matchId, +h, +a, xChoices);
+    if (ok) {
+        const myP = allPreds.find(p => String(p.matchId).replace(/^M/,'') === String(matchId) && p.userName === localStorage.getItem('wc_nickname'));
+        if (myP) {
+            showToast('预测已更新 ✓');
+        } else {
+            showToast('预测已提交 ✓');
+        }
+        await fetchPreds();
+        loadMatches(); loadMyPredictions(); loadLeaderboard();
+    }
+}
+
+// ======== 我的预测页 ========
+// X因素选项：点击切换选择，再点一次取消
+function toggleXf(matchId, xfId, val) {
+    const key = matchId + '-' + xfId;
+    const el = document.getElementById('xf-' + matchId + '-' + xfId + '-' + val);
+    if (!el) return;
+    if (xfSel[key] === val) {
+        delete xfSel[key];
+        el.classList.remove('xf-opt-sel');
+    } else {
+        document.querySelectorAll('[id^="xf-' + matchId + '-' + xfId + '-"]').forEach(n => n.classList.remove('xf-opt-sel'));
+        el.classList.add('xf-opt-sel');
+        xfSel[key] = val;
+    }
+}
+
+// ======== 用户评价称号（按实时排名 + 预测风格自动计算）========
+const EVAL_SUB = {
+  'P03':'人形自走比分打印机',
+  'P01':'既当庄家又抢分的老六',
+  'P05':'算分差比算命还准的偏执狂',
+  'P02':'场场打卡却天天买错的怨种',
+  'P04':'闷声发大财的扫地机器人',
+  'P12':'随缘下注的佛系赌仙',
+  'P09':'嘴上指导别人自己乱猜的教练',
+  'P13':'软萌外表下的排行榜刺客',
+  'P14':'输得明明白白的倔强复读机',
+  'P16':'刚入场就敢梭哈的愣头青',
+  'P17':'半路杀出的独臂神枪手',
+  'P10':'来去如风重在参与的划水仙人'
+};
+
+function evalUserTitle(userName) {
+    // 1) 全量排名：按总分降序
+    const totals = {};
+    allPreds.forEach(p => { if (typeof p.points === 'number') totals[p.userName] = (totals[p.userName] || 0) + p.points + (typeof p.xPoints === 'number' ? p.xPoints : 0); });
+    const ranked = Object.keys(totals).sort((a, b) => totals[b] - totals[a]);
+    const rank = ranked.indexOf(userName) + 1;
+    const totalUsers = ranked.length;
+
+    // 2) 单人风格比率（完美 / 净胜球命中 / 方向对 / 参与奖）
+    function ratesOf(u) {
+        const ms = allPreds.filter(p => p.userName === u && typeof p.points === 'number' &&
+            matches.some(m => String(m.id) === String(p.matchId) && m.settledDate));
+        let perfect = 0, dir = 0, part = 0, net = 0;
+        ms.forEach(p => {
+            const m = matches.find(x => String(x.id) === String(p.matchId)); if (!m) return;
+            const hp = Number(p.homePred), ap = Number(p.awayPred), hs = Number(m.homeScore), as = Number(m.awayScore);
+            if (hp === hs && ap === as) perfect++;
+            else if (Math.abs(hp - ap) === Math.abs(hs - as)) net++;
+            else if (Math.sign(hp - ap) === Math.sign(hs - as)) dir++;
+            else part++;
+        });
+        const N = ms.length || 1;
+        return { perfect: perfect / N, net: net / N, dir: dir / N, part: part / N };
+    }
+
+    // 3) 全组均值/标准差，求"相对最突出"的维度（z-score）
+    const users = [...new Set(allPreds.map(p => p.userName))].filter(u =>
+        allPreds.some(p => p.userName === u && typeof p.points === 'number'));
+    const grp = users.map(ratesOf);
+    const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+    const std = a => { const m = mean(a); return Math.sqrt(mean(a.map(v => (v - m) ** 2))) || 1; };
+    const M = { perfect: mean(grp.map(r => r.perfect)), net: mean(grp.map(r => r.net)), dir: mean(grp.map(r => r.dir)), part: mean(grp.map(r => r.part)) };
+    const S = { perfect: std(grp.map(r => r.perfect)), net: std(grp.map(r => r.net)), dir: std(grp.map(r => r.dir)), part: std(grp.map(r => r.part)) };
+
+    // 4) 形容词：取相对全组最突出的风格维度
+    const r = ratesOf(userName);
+    const dims = [
+        { z: (r.perfect - M.perfect) / S.perfect, a: '神准的',     a2: '人形自走的' },
+        { z: (r.net - M.net) / S.net,             a: '精算的',     a2: '抠分差的偏执狂' },
+        { z: (r.dir - M.dir) / S.dir,             a: '稳健的',     a2: '老练的' },
+        { z: (r.part - M.part) / S.part,          a: '佛系的',     a2: '随缘下注的' }
+    ].sort((x, y) => y.z - x.z);
+    let adj = dims[0].a, adj2 = dims[0].a2;
+    if (rank === 1) adj = '弹无虚发的';
+
+    // 5) 名词：排名档位
+    let noun, noun2;
+    if (rank === 1)            { noun = '领跑者';   noun2 = '神准帝'; }
+    else if (rank === 2)       { noun = '无冕王';     noun2 = '无冕之王'; }
+    else if (rank === 3)       { noun = '青铜陪跑';   noun2 = '铜牌陪跑'; }
+    else if (rank <= 6)        { noun = '中坚悍将'; noun2 = '扫地僧'; }
+    else if (rank <= 10)       { noun = '实力派';   noun2 = '赌仙'; }
+    else                       { noun = '新锐';     noun2 = '划水仙人'; }
+
+    const subFixed = EVAL_SUB[userName];
+    const sub = subFixed ? ('「' + subFixed + '」') : ('「' + adj2 + noun2 + '」');
+    return { main: adj + noun, sub };
+}
+
+// ======== 预测风格画像雷达（保守理性 / 从众跟随 / 激进冒险 / 逆向独行）========
+// 复用 allPreds + cloudScores，每次刷新实时算，不新增任何存储字段
+function computeStyleRadarAll() {
+    const dir = (h, a) => h > a ? 'H' : (h < a ? 'A' : 'D');
+    const scoresMap = {};
+    for (const mid in cloudScores) {
+        const k = String(mid).replace(/^M/, '');
+        const s = cloudScores[mid];
+        if (s && s.status === 'finished' && s.homeScore != null && s.awayScore != null) scoresMap[k] = s;
+    }
+    const settledIds = Object.keys(scoresMap);
+    if (!settledIds.length) return null;
+
+    // 每场群体预测统计
+    const matchStats = {};
+    for (const mid of settledIds) {
+        const arr = allPreds.filter(p => String(p.matchId).replace(/^M/, '') === mid && p.homePred != null && p.awayPred != null);
+        const actual = scoresMap[mid];
+        const aDir = dir(actual.homeScore, actual.awayScore);
+        const sc = {}, dc = {};
+        for (const x of arr) { const k = x.homePred + '-' + x.awayPred; sc[k] = (sc[k] || 0) + 1; const dd = dir(x.homePred, x.awayPred); dc[dd] = (dc[dd] || 0) + 1; }
+        const ms = Object.entries(sc).sort((a, b) => b[1] - a[1])[0];
+        const md = Object.entries(dc).sort((a, b) => b[1] - a[1])[0];
+        matchStats[mid] = { aDir, modeScoreKey: ms ? ms[0] : null, modeDir: md ? md[0] : null };
+    }
+
+    // 全局预测总进球均值/标准差（用于激进维度平滑映射）
+    const userGoals = {};
+    for (const p of allPreds) {
+        const mid = String(p.matchId).replace(/^M/, '');
+        if (!settledIds.includes(mid)) continue;
+        if (p.homePred == null || p.awayPred == null) continue;
+        const u = p.userName;
+        userGoals[u] = userGoals[u] || { g: 0, n: 0 };
+        userGoals[u].g += (Number(p.homePred) + Number(p.awayPred)); userGoals[u].n++;
+    }
+    const usersList = Object.keys(userGoals);
+    let tg = 0, tn = 0;
+    for (const u of usersList) { tg += userGoals[u].g; tn += userGoals[u].n; }
+    const gAvg = tg / tn;
+    let varSum = 0;
+    for (const u of usersList) { const ag = userGoals[u].g / userGoals[u].n; varSum += (ag - gAvg) ** 2 * userGoals[u].n; }
+    const gStd = Math.sqrt(varSum / tn) || 1;
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+    // 每人累计
+    const raw = {};
+    for (const p of allPreds) {
+        const u = p.userName;
+        const mid = String(p.matchId).replace(/^M/, '');
+        if (!settledIds.includes(mid)) continue;
+        if (p.homePred == null || p.awayPred == null) continue;
+        const s = raw[u] = raw[u] || { N: 0, dc: 0, pg: 0, up: 0, cf: 0, ct: 0 };
+        s.N++;
+        const actual = scoresMap[mid];
+        const aDir = dir(actual.homeScore, actual.awayScore);
+        const pDir = dir(p.homePred, p.awayPred);
+        if (pDir === aDir) s.dc++;
+        s.pg += (Number(p.homePred) + Number(p.awayPred));
+        if ((aDir === 'H' && pDir === 'A') || (aDir === 'A' && pDir === 'H')) s.up++;
+        const ms = matchStats[mid];
+        if (ms.modeScoreKey && (p.homePred + '-' + p.awayPred) === ms.modeScoreKey) s.cf++;
+        if (ms.modeDir && pDir !== ms.modeDir) s.ct++;
+    }
+
+    const LABELS = { conservative: '保守理性', aggressive: '激进冒险', conformist: '从众跟随', contrarian: '逆向独行' };
+    function toDims(s) {
+        const dirRate = s.dc / s.N, avgGoals = s.pg / s.N, upsetRate = s.up / s.N, conformRate = s.cf / s.N, contraRate = s.ct / s.N;
+        const conservative = Math.round(dirRate * 100);
+        const aggressive = Math.round(clamp(50 + (avgGoals - gAvg) / gStd * 35, 3, 99));
+        const conformist = Math.round(conformRate * 100);
+        const contrarian = Math.round(clamp(contraRate * 100, 3, 99));
+        const dims = { conservative, aggressive, conformist, contrarian };
+        const top = Object.entries(dims).sort((a, b) => b[1] - a[1])[0];
+        return { N: s.N, avgGoals, dims, topLabel: LABELS[top[0]], topScore: top[1] };
+    }
+
+    const byUser = {};
+    for (const u in raw) byUser[u] = toDims(raw[u]);
+    const acc = { conservative: 0, aggressive: 0, conformist: 0, contrarian: 0 };
+    const ul = Object.keys(byUser);
+    for (const u of ul) for (const k in acc) acc[k] += byUser[u].dims[k];
+    const groupAvg = ul.length ? {
+        conservative: Math.round(acc.conservative / ul.length),
+        aggressive: Math.round(acc.aggressive / ul.length),
+        conformist: Math.round(acc.conformist / ul.length),
+        contrarian: Math.round(acc.contrarian / ul.length)
+    } : { conservative: 50, aggressive: 50, conformist: 50, contrarian: 50 };
+
+    return { groupAvg, byUser, gAvg };
+}
+
+function renderStyleRadarSVG(meDims, groupAvg) {
+    const cx = 180, cy = 140, R = 90;
+    const axes = [
+        { key: 'conservative', name: '保守理性', ang: -90 },
+        { key: 'conformist', name: '从众跟随', ang: 0 },
+        { key: 'aggressive', name: '激进冒险', ang: 90 },
+        { key: 'contrarian', name: '逆向独行', ang: 180 },
+    ];
+    const pt = (val, ang) => { const a = ang * Math.PI / 180; return [cx + val / 100 * R * Math.cos(a), cy + val / 100 * R * Math.sin(a)]; };
+    let grid = '';
+    [25, 50, 75, 100].forEach(lv => {
+        const pts = axes.map(a => pt(lv, a.ang).join(',')).join(' ');
+        grid += `<polygon points="${pts}" fill="none" stroke="#d9e2f0" stroke-width="1"/>`;
+    });
+    let spokes = '', labels = '';
+    axes.forEach(a => {
+        const [x, y] = pt(100, a.ang);
+        spokes += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#d9e2f0" stroke-width="1"/>`;
+        const [lx, ly] = pt(116, a.ang);
+        let anchor = 'middle';
+        if (a.ang === 0) anchor = 'start';
+        if (a.ang === 180) anchor = 'end';
+        const fs = a.name === '保守理性' ? 15 : 13;
+        labels += `<text x="${lx}" y="${ly}" text-anchor="${anchor}" dominant-baseline="middle" font-size="${fs}" font-weight="700" fill="#1e3c72">${a.name}</text>`;
+    });
+    // 全员均值（灰色虚线参考）
+    const gaPts = axes.map(a => pt(groupAvg[a.key], a.ang).join(',')).join(' ');
+    let poly = `<polygon points="${gaPts}" fill="#bbb" fill-opacity="0.08" stroke="#999" stroke-width="1" stroke-dasharray="4 3"/>`;
+    // 我（蓝色实心）
+    const mePts = axes.map(a => pt(meDims[a.key], a.ang).join(',')).join(' ');
+    poly += `<polygon points="${mePts}" fill="#2a5298" fill-opacity="0.30" stroke="#1e3c72" stroke-width="2"/>`;
+    axes.forEach(a => { const [x, y] = pt(meDims[a.key], a.ang); poly += `<circle cx="${x}" cy="${y}" r="3" fill="#1e3c72"/>`; });
+    // 顶点数值（带白色描边halo）
+    let vals = '';
+    axes.forEach(a => {
+        const [x, y] = pt(meDims[a.key], a.ang);
+        vals += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="#2a5298" stroke="#fff" stroke-width="2.5" paint-order="stroke">${meDims[a.key]}</text>`;
+    });
+    // 图例：置于底部空白区，避免与「激进冒险」下标语重叠
+    const legend = `
+        <rect x="132" y="300" width="11" height="11" rx="2" fill="#2a5298" fill-opacity="0.55"/><text x="148" y="309" font-size="11" fill="#1e3c72">我</text>
+        <rect x="196" y="300" width="11" height="11" rx="2" fill="#999"/><text x="212" y="309" font-size="11" fill="#777">全员均值</text>`;
+    return `<svg viewBox="0 0 360 324" width="100%" style="max-width:330px;display:block;margin:0 auto;" xmlns="http://www.w3.org/2000/svg">
+        ${grid}${spokes}${poly}${labels}${vals}${legend}
+    </svg>`;
+}
+
+function loadMyPredictions() {
+    const container = document.getElementById('tab-my-predictions');
+    const me = localStorage.getItem('wc_nickname');
+    const preds = allPreds.filter(p => p.userName === me);
+
+    if (!preds.length) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">📝</div><p>还没有预测记录<br>去赛程页提交预测吧！</p></div>';
+        return;
+    }
+
+    const sorted = preds.sort((a,b) => {
+        const ma = matches.find(m => String(m.id) === String(a.matchId));
+        const mb = matches.find(m => String(m.id) === String(b.matchId));
+        return new Date(mb?.date||0) - new Date(ma?.date||0);
+    });
+
+    const myPeekTotal = allPeeks.filter(pk => pk.userName === me).reduce((s,pk) => s + (Number(pk.cost)||0), 0);
+    const total = preds.reduce((s,p) => s + (p.points||0) + ((typeof p.xPoints==='number' && !isNaN(p.xPoints)) ? p.xPoints : 0), 0) - myPeekTotal;
+    const done = preds.filter(p => typeof p.points === 'number' && !isNaN(p.points)).length;
+    const perfect = preds.filter(p => { const m = matches.find(x => String(x.id) === String(p.matchId)); return m && m.settledDate && Number(p.homePred) === m.homeScore && Number(p.awayPred) === m.awayScore; }).length;
+
+    const evalT = evalUserTitle(me);
+
+    let html = `<div style="background:linear-gradient(135deg,#1a2f5e,#2a5298); border-radius:12px; padding:18px; margin-bottom:16px; color:white; text-align:center; box-shadow:0 4px 14px rgba(26,47,94,.3);">
+        <div style="font-size:12px; opacity:.8;">🏅 江湖人称</div>
+        <div style="font-size:22px; font-weight:800; margin-top:4px; letter-spacing:1px;">${evalT.main}</div>
+        <div style="font-size:14px; opacity:.78; margin-top:5px; font-style:italic;">${evalT.sub}</div>
+        <div style="margin-top:13px; padding-top:12px; border-top:1px solid rgba(255,255,255,.22); display:flex; justify-content:center; align-items:flex-end; gap:20px;">
+            <div><div style="font-size:26px; font-weight:800; line-height:1;">${total}</div><div style="font-size:11px; opacity:.6; margin-top:2px;">总积分</div></div>
+            <div><div style="font-size:20px; font-weight:700;">${preds.length}</div><div style="font-size:11px; opacity:.6;">已预测</div></div>
+            <div><div style="font-size:20px; font-weight:700;">${done}<span style="font-size:12px;opacity:.55;font-weight:600;">/${preds.length}</span></div><div style="font-size:11px; opacity:.6;">已结算/预测</div></div>
+            <div><div style="font-size:20px; font-weight:700;">${perfect}</div><div style="font-size:11px; opacity:.6;">完美</div></div>
+        </div>
+    </div>`;
+
+    // 预测风格画像雷达
+    const styleAll = computeStyleRadarAll();
+    if (styleAll && styleAll.byUser[me]) {
+        const meStyle = styleAll.byUser[me];
+        html += `<div style="background:#fff; border:1px solid #d9e2f0; border-radius:12px; padding:12px 10px 8px; margin-bottom:16px; box-shadow:0 2px 8px rgba(26,47,94,.08);">
+            <div style="text-align:center; font-size:14px; font-weight:700; color:#1e3c72; margin-bottom:10px;">🎯 预测风格画像</div>
+            <div style="text-align:center; font-size:13px; color:#5a7ab5; opacity:.85; margin:0 0 6px;">基于 ${meStyle.N} 场已结算 · 主风格：<b style="color:#2a5298; font-size:15px;">${meStyle.topLabel}</b></div>
+            ${renderStyleRadarSVG(meStyle.dims, styleAll.groupAvg)}
+            <div style="display:flex; justify-content:space-around; padding:8px 4px 2px; font-size:13px; color:#1e3c72;">
+                <span>保守 <b style="font-size:15px">${meStyle.dims.conservative}</b></span>
+                <span>从众 <b style="font-size:15px">${meStyle.dims.conformist}</b></span>
+                <span>激进 <b style="font-size:15px">${meStyle.dims.aggressive}</b></span>
+                <span>逆向 <b style="font-size:15px">${meStyle.dims.contrarian}</b></span>
+            </div>
+        </div>`;
+    }
+
+    html += sorted.map(pred => {
+        const m = matches.find(x => String(x.id) === String(pred.matchId));
+        if (!m) return '';
+        let ptsHtml;
+        const peekC = peekCostForMatch(pred.matchId, me);
+        // X因素分 badge（已结束且本场有X题、本人有选择时显示）
+        let xBadge = '';
+        if (m.status === 'finished' && m.xFactors && m.xFactors.length && pred.xChoices) {
+            const xp = (typeof pred.xPoints === 'number' && !isNaN(pred.xPoints)) ? pred.xPoints : null;
+            if (xp !== null) {
+                xBadge = `<span class="pts-badge" style="background:${xp>=0?'#2e7d3222':'#c6282822'}; color:${xp>=0?'#2e7d32':'#c62828'}; border:1px solid ${xp>=0?'#2e7d3244':'#c6282844'}; margin-left:6px;">X${xp>0?'+':''}${xp}</span>`;
+            } else {
+                xBadge = `<span class="pts-badge" style="background:#f5f5f5; color:#999; border:1px solid #ddd; margin-left:6px;">X待结算</span>`;
+            }
+        }
+        if (m.status === 'finished' && pred.points !== null) {
+            const perfect = isPerfectPred(pred, m);
+            const labels = {5:'5分',4:'4分',3:'3分',1:'1分'};
+            const label = perfect ? '⭐ 完美 ' + pred.points + '分' : (labels[pred.points]||pred.points+'分');
+            const cls = perfect ? 'pts-perfect' : 'pts-plain';
+            ptsHtml = `<span class="pts-badge ${cls}">${label}</span>${xBadge}` + (peekC>0 ? `<div class="peek-deduct">🔍偷看 -${peekC}　净得 ${pred.points - peekC}分</div>` : '');
+        } else {
+            ptsHtml = `<span class="pts-badge pts-pending">待开赛</span>` + (peekC>0 ? `<div class="peek-deduct">🔍偷看 -${peekC}</div>` : '');
+        }
+        const predStr = pred.homePred != null ? `<div class="mpc-pred">📝 赛前：<strong>${pred.homePred} : ${pred.awayPred}</strong></div>` : '';
+        const xfHtml = (m.xFactors && m.xFactors.length && pred.xChoices) ? renderXfChoices(m, pred.xChoices) : '';
+        return `<div class="my-pred-card">
+            <div class="mpc-left">
+                <div class="mpc-matchname">${cnName(m.home)} vs ${cnName(m.away)}</div>
+                <div class="mpc-time">${m.date} 北京时</div>
+                ${predStr}
+                ${m.status==='finished' ? `<div class="mpc-actual">实际：<strong style="color:#1e3c72">${m.homeScore} : ${m.awayScore}</strong></div>` : ''}
+                ${xfHtml}
+            </div>
+            <div style="text-align:right">
+                ${ptsHtml}
+            </div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = html;
+}
+
+// ======== 更新参与人数 ========
+function updatePlayerCount() {
+    const names = [...new Set(allPreds.map(p => p.userName))];
+    const badge = document.getElementById('player-count-badge');
+    const count = document.getElementById('player-count');
+    if (names.length > 0) {
+        badge.style.display = 'inline-flex';
+        count.textContent = names.length;
+    }
+}
+
+// ======== 排行榜 ========
+function loadLeaderboard() {
+    const container = document.getElementById('tab-leaderboard');
+    const me = localStorage.getItem('wc_nickname');
+    const preds = allPreds;
+
+    const todayStr = getTodayStr(); // 中国本地日期，不用UTC
+    const stats = {};
+    // 按日统计每人积分，用于计算日冠军
+    const dailyStats = {}; // { '2026-06-12': { userName: pts, ... }, ... }
+    preds.filter(p => p.userName && p.userName !== 'null').forEach(p => {
+        if (!stats[p.userName]) stats[p.userName] = { total:0, count:0, perfect:0, settled:0, today:0, todayBase:0, todayBaseSettled:0, todayPerfect:0, todaySettled:0, dayChamps:0, dayLasts:0, gpTotal:0, gpSettled:0, koTotal:0, koSettled:0, baseTotal:0, baseSettled:0, predictTotal:0, xTotal:0, todayPredict:0, todayX:0 };
+        stats[p.userName].count++;
+        // 完美预测：只要有比分就统计，不依赖points是否已结算
+        const _pm = matches.find(x => String(x.id) === String(p.matchId));
+        const _md4p = MATCH_DATA.find(x => String(x.id) === String(p.matchId));
+        if (_pm && _pm.settledDate && Number(p.homePred) === _pm.homeScore && Number(p.awayPred) === _pm.awayScore) {
+            stats[p.userName].perfect++;
+            // 当日完美（已结算且bjDate=今天）
+            if (_md4p && _md4p.bjDate && _md4p.bjDate.split(' ')[0] === todayStr) {
+                stats[p.userName].todayPerfect++;
+            }
+        }
+        if (typeof p.points === 'number' && !isNaN(p.points)) {
+            // X因素得分：并入总分/今日/淘汰赛分/逐日榜（仅淘汰赛M101起有值，历史场为0，不影响历史）
+            const xp = (typeof p.xPoints === 'number' && !isNaN(p.xPoints)) ? p.xPoints : 0;
+            stats[p.userName].predictTotal += p.points;
+            stats[p.userName].xTotal += xp;
+            stats[p.userName].total += p.points + xp;
+            stats[p.userName].settled++;
+            // 基础分：积分÷阶段倍率（消除淘汰赛通胀）——综合评定口径，不含X
+            const md = MATCH_DATA.find(x => String(x.id) === String(p.matchId));
+            const phaseMultiplierMap = { '小组赛':1, '十六分之一决赛':2, '八分之一决赛':3, '四分之一决赛':4, '半决赛':5, '季军赛':6, '决赛':7 };
+            const multiplier = md && md.phase ? (phaseMultiplierMap[md.phase] || 1) : 1;
+            const basePts = multiplier > 0 ? p.points / multiplier : p.points;
+            stats[p.userName].baseTotal += basePts;
+            stats[p.userName].baseSettled++;
+            // 区分小组赛/淘汰赛场均
+            if (md && md.phase === '小组赛') {
+                stats[p.userName].gpTotal += p.points;
+                stats[p.userName].gpSettled++;
+            } else if (md && md.phase && md.phase !== '小组赛') {
+                stats[p.userName].koTotal += p.points + xp;
+                stats[p.userName].koSettled++;
+            }
+            // 从MATCH_DATA的bjDate判断比赛日期（不再依赖settledDate）
+            if (md && md.bjDate) {
+                const dateKey = md.bjDate.split(' ')[0];
+                if (dateKey === todayStr) {
+                    stats[p.userName].today += p.points + xp;
+                    stats[p.userName].todayPredict += p.points;
+                    stats[p.userName].todayX += xp;
+                    stats[p.userName].todaySettled++;
+                    stats[p.userName].todayBase += basePts;
+                    stats[p.userName].todayBaseSettled++;
+                }
+                // 累加每日积分
+                if (!dailyStats[dateKey]) dailyStats[dateKey] = {};
+                if (!dailyStats[dateKey][p.userName]) dailyStats[dateKey][p.userName] = 0;
+                dailyStats[dateKey][p.userName] += p.points + xp;
+            }
+        }
+    });
+    // 偷看成本扣减：花费的参与分从总分/当日/每日榜扣除，归到比赛所在日期（体现在该场结算）
+    allPeeks.forEach(pk => {
+        if (!pk.userName || pk.userName === 'null') return;
+        if (!stats[pk.userName]) {
+            stats[pk.userName] = { total:0, count:0, perfect:0, settled:0, today:0, todayBase:0, todayBaseSettled:0, todayPerfect:0, todaySettled:0, dayChamps:0, dayLasts:0, gpTotal:0, gpSettled:0, koTotal:0, koSettled:0, baseTotal:0, baseSettled:0, predictTotal:0, xTotal:0, todayPredict:0, todayX:0 };
+        }
+        const cost = Number(pk.cost) || 0;
+        stats[pk.userName].total -= cost;
+        stats[pk.userName].predictTotal -= cost;
+        const md = MATCH_DATA.find(x => String(x.id) === String(pk.matchId).replace(/^M/,''));
+        if (md && md.bjDate) {
+            const dateKey = md.bjDate.split(' ')[0];
+            if (dateKey === todayStr) { stats[pk.userName].today -= cost; stats[pk.userName].todayPredict -= cost; }
+            if (!dailyStats[dateKey]) dailyStats[dateKey] = {};
+            if (!dailyStats[dateKey][pk.userName]) dailyStats[dateKey][pk.userName] = 0;
+            dailyStats[dateKey][pk.userName] -= cost;
+        }
+    });
+    // 计算日冠军：每天积分最高的人（允许多人并列），只算昨天及以前（今天未锁定不算）
+    const dayChampCounts = {}; // { userName: count }
+    Object.entries(dailyStats).forEach(([dateKey, userPts]) => {
+        if (dateKey >= todayStr) return; // 今天及以后的不算
+        const maxPts = Math.max(...Object.values(userPts));
+        if (maxPts > 0) {
+            Object.entries(userPts).forEach(([userName, pts]) => {
+                if (pts === maxPts) {
+                    dayChampCounts[userName] = (dayChampCounts[userName] || 0) + 1;
+                }
+            });
+        }
+    });
+    // 计算日最后一名：每天积分最低的人（允许多人并列），只算昨天及以前
+    const dayLastCounts = {};
+    Object.entries(dailyStats).forEach(([dateKey, userPts]) => {
+        if (dateKey >= todayStr) return;
+        const values = Object.values(userPts);
+        const maxPts = Math.max(...values);
+        const minPts = Math.min(...values);
+        if (minPts < maxPts) {  // 不是所有人都并列
+            Object.entries(userPts).forEach(([userName, pts]) => {
+                if (pts === minPts) {
+                    dayLastCounts[userName] = (dayLastCounts[userName] || 0) + 1;
+                }
+            });
+        }
+    });
+    // 写回stats
+    Object.keys(stats).forEach(n => {
+        stats[n].dayChamps = dayChampCounts[n] || 0;
+        stats[n].dayLasts = dayLastCounts[n] || 0;
+    });
+
+    // 计算每人的参与率：入局后总已结算场中有多少场参与了
+    const userFirstMatchIdx = {};
+    const userSettled = {};
+    preds.filter(p => p.userName && p.userName !== 'null').forEach(p => {
+        const mdIdx = MATCH_DATA.findIndex(x => String(x.id) === String(p.matchId));
+        if (mdIdx < 0) return;
+        if (userFirstMatchIdx[p.userName] === undefined || mdIdx < userFirstMatchIdx[p.userName]) {
+            userFirstMatchIdx[p.userName] = mdIdx;
+        }
+        if (typeof p.points === 'number' && !isNaN(p.points)) {
+            userSettled[p.userName] = (userSettled[p.userName] || 0) + 1;
+        }
+    });
+    const settledMatchIndices = [];
+    matches.forEach((m, idx) => {
+        if (m.settledDate && m.homeScore != null) {
+            const mdIdx = MATCH_DATA.findIndex(x => String(x.id) === String(m.id));
+            if (mdIdx >= 0) settledMatchIndices.push(mdIdx);
+        }
+    });
+    settledMatchIndices.sort((a,b) => a - b);
+
+    const userParticipationRate = {};
+    Object.keys(stats).forEach(userName => {
+        const firstIdx = userFirstMatchIdx[userName];
+        if (firstIdx === undefined) { userParticipationRate[userName] = 0; return; }
+        const totalFromEntry = settledMatchIndices.filter(idx => idx >= firstIdx).length;
+        const mySettled = userSettled[userName] || 0;
+        userParticipationRate[userName] = totalFromEntry > 0 ? Math.min(mySettled / totalFromEntry, 1) : 0;
+    });
+
+    const rankMode = localStorage.getItem('wc_rank_mode') || 'total';
+    // 称号系统：王系列（金色，依据全部数据）+ 达人系列（银色，依据日数据）
+    // 每项称号只颁发给该项指标的第一名（或并列第一），每人最多2个
+    // 达人系列排序：完美达人 > 神准达人 > 逆袭达人 > 全勤达人
+    function getTitle(name, s, avgBase, participationRate) {
+        const allStats = Object.entries(stats);
+        const kingTitles = []; // 王系列
+        const expertTitles = []; // 达人系列
+
+        // ── 王系列（全量数据） ──
+        // 完美王：总完美次数最多者（需≥3次）
+        const maxPerfect = Math.max(...allStats.map(([,st]) => st.perfect));
+        if (s.perfect >= 3 && s.perfect === maxPerfect) kingTitles.push('完美王');
+
+        // X因素王：X因素题累计得分最高者（需>0；并列同持）。次序仅在完美王之后。
+        const _xAgg = {};
+        allPreds.forEach(p => { if (typeof p.xPoints === 'number' && !isNaN(p.xPoints)) _xAgg[p.userName] = (_xAgg[p.userName]||0) + p.xPoints; });
+        const _maxX = Object.keys(_xAgg).length ? Math.max(...Object.values(_xAgg)) : 0;
+        if (_maxX > 0 && (_xAgg[name] || 0) === _maxX) kingTitles.push('X因素王');
+
+        // 神准王：场均基础分最高者（需≥10场已结算）
+        const validBaseUsers = allStats.filter(([,st]) => st.baseSettled >= 10);
+        if (s.baseSettled >= 10 && validBaseUsers.length > 0) {
+            const maxAvgBase = Math.max(...validBaseUsers.map(([,st]) => st.baseSettled > 0 ? st.baseTotal / st.baseSettled : 0));
+            if (avgBase === maxAvgBase) kingTitles.push('神准王');
+        }
+
+        // 全勤王：从首次参与那场起，之后每一场已结算比赛都参与了（参与率=100%），且累计参与≥10场。
+        // 按定义，所有"首次起场场不落且累计参与≥10场"的人均授予此称号（可多人同持）。
+        if (participationRate >= 1.0 && (s.settled || 0) >= 10) {
+            kingTitles.push('全勤王');
+        }
+
+        // ── 达人系列（日数据） ──
+        // 完美达人：当日完美次数最多者（需≥1次）
+        const maxTodayPerfect = Math.max(...allStats.map(([,st]) => st.todayPerfect || 0));
+        if ((s.todayPerfect || 0) >= 1 && (s.todayPerfect || 0) === maxTodayPerfect) expertTitles.push('完美达人');
+
+        // 神准达人：当日场均基础分最高者（需当日≥1场已结算）
+        const todayBaseUsers = allStats.filter(([,st]) => (st.todayBaseSettled || 0) >= 1);
+        if ((s.todayBaseSettled || 0) >= 1 && todayBaseUsers.length > 0) {
+            const maxTodayAvgBase = Math.max(...todayBaseUsers.map(([,st]) => st.todayBaseSettled > 0 ? st.todayBase / st.todayBaseSettled : 0));
+            const myTodayAvgBase = s.todayBaseSettled > 0 ? s.todayBase / s.todayBaseSettled : 0;
+            if (myTodayAvgBase === maxTodayAvgBase) expertTitles.push('神准达人');
+        }
+
+        // 逆袭达人：当日积分排名 较 上一次比赛日的当日排名 进步最多者。
+        // 口径与前端"当日"模式一致：当日分 = points + xPoints（含X因素）。
+        // "上一次排名"= 上一次有比赛那天的当日积分排名（自动跳过空档日），而不是累计总积分排名。
+        // 门槛：必须至少连超 MIN_COMEBACK_RISE 人（默认2），否则算不上"逆袭"（如无人进步则空缺）。
+        const MIN_COMEBACK_RISE = 2;
+        const todayStr = getTodayStr();
+        const todayMatches = MATCH_DATA.filter(m => m.bjDate && m.bjDate.split(' ')[0] === todayStr).map(m => String(m.id));
+        const allDays = [...new Set(MATCH_DATA.filter(m => m.bjDate).map(m => m.bjDate.split(' ')[0]))].filter(d => d < todayStr).sort();
+        const prevDay = allDays.length ? allDays[allDays.length - 1] : null;
+        const prevMatches = prevDay ? MATCH_DATA.filter(m => m.bjDate && m.bjDate.split(' ')[0] === prevDay).map(m => String(m.id)) : [];
+        const dayRankOf = (matchIds) => {
+            const mset = new Set(matchIds.map(x => String(x).replace(/^M/,'')));
+            const map = {};
+            allPreds.filter(p => p.userName && !p.userName.includes('�') && mset.has(String(p.matchId).replace(/^M/,'')) && typeof p.points === 'number')
+                     .forEach(p => { map[p.userName] = (map[p.userName]||0) + (Number(p.points)||0) + (Number(p.xPoints)||0); });
+            const sorted = Object.entries(map).sort((a,b) => b[1]-a[1]);
+            const rk = {}; sorted.forEach(([n],i) => rk[n] = i+1);
+            return rk;
+        };
+        const curDayRank = dayRankOf(todayMatches);
+        const prevDayRank = dayRankOf(prevMatches);
+        const anyTodayActivity = Object.keys(curDayRank).length > 0;
+        if (anyTodayActivity && prevDay) {
+            const rankRises = allStats.map(([n, st]) => {
+                if (!curDayRank[n] || !prevDayRank[n]) return [n, 0]; // 今日未参赛 或 上场未参赛
+                return [n, prevDayRank[n] - curDayRank[n]]; // 正数=名次上升
+            }).filter(([, rise]) => rise >= MIN_COMEBACK_RISE);
+            if (rankRises.length > 0) {
+                const maxRise = Math.max(...rankRises.map(([,r]) => r));
+                const myRise = rankRises.find(([n]) => n === name);
+                if (myRise && myRise[1] === maxRise) expertTitles.push('逆袭达人');
+            }
+        }
+
+        // 全勤达人：当日参与率最高者（需当日≥1场已结算）
+        // 当日参与率 = 当日实际已结算场 / 当日总已结算场
+        const todaySettledMatchIds = matches.filter(m => {
+            const mdIdx = MATCH_DATA.findIndex(x => String(x.id) === String(m.id));
+            if (mdIdx < 0) return false;
+            const md = MATCH_DATA[mdIdx];
+            return md && md.bjDate && md.bjDate.split(' ')[0] === todayStr && m.settledDate && m.homeScore != null;
+        }).map(m => String(m.id));
+        const todayTotalSettled = todaySettledMatchIds.length;
+        if (todayTotalSettled > 0) {
+            // 每人当日参与了几场
+            const todayParticipation = {};
+            allStats.forEach(([n, st]) => {
+                const myTodaySettled = preds.filter(p => p.userName === n && todaySettledMatchIds.includes(String(p.matchId)) && typeof p.points === 'number' && !isNaN(p.points)).length;
+                todayParticipation[n] = myTodaySettled / todayTotalSettled;
+            });
+            const maxTodayPR = Math.max(...Object.values(todayParticipation));
+            if ((todayParticipation[name] || 0) === maxTodayPR && maxTodayPR > 0) expertTitles.push('全勤达人');
+        }
+
+        // 合并：优先王系列，然后达人系列（逆袭达人>全勤达人），不截取，由filterTitlesByMode按模式截取
+        const all = [...kingTitles, ...expertTitles];
+        return all.map(t => ({
+            name: t,
+            isKing: kingTitles.includes(t)
+        }));
+    }
+    // 根据排行榜模式过滤称号：总积分只显示王系列，当日只显示达人系列，综合评定显示全部
+    function filterTitlesByMode(titles, mode) {
+        if (mode === 'total') {
+            // 总积分：只显示王系列，最多2个
+            const kings = titles.filter(t => t.isKing).slice(0, 2);
+            return kings;
+        } else if (mode === 'today') {
+            // 当日：只显示达人系列，最多2个
+            const experts = titles.filter(t => !t.isKing).slice(0, 2);
+            return experts;
+        }
+        // 综合评定：原逻辑不变（王优先+达人，最多2个）
+        return titles.slice(0, 2);
+    }
+    // 当日是否「参加了比赛」：当天有比赛的场次至少提交过一次预测（不论是否已结算/有无分）
+    const todayMatchIdsSet = new Set(matches.filter(m => {
+        const md = MATCH_DATA.find(x => String(x.id) === String(m.id));
+        return md && md.bjDate && md.bjDate.split(' ')[0] === todayStr;
+    }).map(m => String(m.id)));
+    const todayParticipated = {};
+    preds.filter(p => p.userName && p.userName !== 'null').forEach(p => {
+        if (todayMatchIdsSet.has(String(p.matchId))) todayParticipated[p.userName] = true;
+    });
+
+    const sorted = Object.entries(stats).sort((a,b) => {
+        if (rankMode === 'today') {
+            // 参加当日比赛者置顶（即使负分也在未参与者之前），组内再按当日分降序
+            const pa = todayParticipated[a[0]] ? 1 : 0;
+            const pb = todayParticipated[b[0]] ? 1 : 0;
+            if (pa !== pb) return pb - pa;
+            if (b[1].today !== a[1].today) return b[1].today - a[1].today;
+            return b[1].total - a[1].total;
+        }
+        if (rankMode === 'composite') {
+            const avgBaseA = a[1].baseSettled > 0 ? a[1].baseTotal / a[1].baseSettled : 0;
+            const avgBaseB = b[1].baseSettled > 0 ? b[1].baseTotal / b[1].baseSettled : 0;
+            const rateA = userParticipationRate[a[0]] || 0;
+            const rateB = userParticipationRate[b[0]] || 0;
+            const compA = avgBaseA * (0.5 + 0.5 * rateA);
+            const compB = avgBaseB * (0.5 + 0.5 * rateB);
+            return compB - compA;
+        }
+        if (b[1].total !== a[1].total) return b[1].total - a[1].total;
+        if (b[1].dayChamps !== a[1].dayChamps) return b[1].dayChamps - a[1].dayChamps;
+        return b[1].perfect - a[1].perfect;
+    });
+
+    if (!sorted.length) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">🏆</div><p>还没有人参与预测<br>快去提交你的预测吧！</p></div>';
+        return;
+    }
+
+    const myRank = sorted.findIndex(([n]) => n === me) + 1;
+
+    const titleMap = { today: '当日积分排行榜', total: '积分排行榜', composite: '综合评定排行榜' };
+    container.innerHTML = `
+    <div class="lb-card">
+        <div class="lb-header">
+            <span>🏆 ${titleMap[rankMode]||'积分排行榜'}</span>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div class="rank-toggle">
+                    <button id="btn-rank-total" class="${rankMode==='total'?'active':''}" onclick="switchRankMode('total')">总积分</button>
+                    <button id="btn-rank-today" class="${rankMode==='today'?'active':''}" onclick="switchRankMode('today')">当日</button>
+                    <button id="btn-rank-composite" class="${rankMode==='composite'?'active':''}" onclick="switchRankMode('composite')">综合评定</button>
+                </div>
+                <span>共${sorted.length}人 · 我排第${myRank||'—'}名</span>
+            </div>
+        </div>
+        ${rankMode === 'composite' ? `<div style="padding:10px 16px;font-size:11px;color:#1e3c72;background:#f0f4ff;border-bottom:1px solid #d0d8f0;">
+            <div style="font-size:14px;font-weight:700;margin-bottom:6px;text-align:center;">不分先后加入，综合评定正确率与参与率</div>
+            <div style="color:#666;line-height:1.6;">
+            评定指数 = 场均基础分 × (0.5 + 0.5 × 参与率)<br>
+            <b>场均基础分</b>：每场预测积分÷阶段倍率（小组赛1倍/十六分之一2倍/八分之一3倍/四分之一4倍/半决赛5倍/季军赛6倍/决赛7倍），消除淘汰赛积分通胀，公平衡量预测准确度。<br>
+            <b>参与率</b>：从首场预测起，已结算场次中你实际参与的比例。
+            </div>
+        </div>` : ''}
+        ${sorted.map(([name, s], i) => {
+            const r = i + 1;
+            const rc = r===1?'rn-1':r===2?'rn-2':r===3?'rn-3':'rn-o';
+            const isME = name === me;
+            // 综合评定计算
+            const avgBase = s.baseSettled > 0 ? s.baseTotal / s.baseSettled : 0;
+            const participationRate = userParticipationRate[name] || 0;
+            const compositeScore = avgBase * (0.5 + 0.5 * participationRate);
+            // 称号
+            const titles = getTitle(name, s, avgBase, participationRate);
+            const displayTitles = filterTitlesByMode(titles, rankMode);
+            const titleHtml = displayTitles.map(t => {
+                const style = t.isKing
+                    ? 'background:linear-gradient(135deg,#ffd700,#ffaa00);color:#5e1a2f;border:1px solid #d4a017;box-shadow:0 0 4px #ffd70066'
+                    : 'background:linear-gradient(135deg,#c0c0c0,#e8e8e8);color:#333;border:1px solid #a0a0a0;box-shadow:0 0 4px #c0c0c066';
+                return `<span style="font-size:9px;border-radius:8px;padding:1px 5px;margin-left:3px;${style}">${t.name}</span>`;
+            }).join('');
+            return `<div class="rank-row${isME?' me':''}">
+                <div class="rank-num ${rc}">${r}</div>
+                <div class="rank-info">
+                    <div class="rank-name">${isME?'👤 ':''}${name}${titleHtml}${s.dayChamps>0?` <span class="day-crown">👑${s.dayChamps}</span>`:''}${s.dayLasts>0?` <span class="day-last">💩${s.dayLasts}</span>`:''}</div>
+                    <div class="rank-sub">${rankMode==='today' ? `${s.todayPerfect||0}次完美  ${s.todaySettled||0}场结算<br>预测今日 ${s.todayPredict||0}分 · X因素今日 ${s.todayX||0}分` : rankMode==='composite' ? `${s.perfect}次完美  ${s.settled}场结算 · 场均基础分 ${avgBase.toFixed(1)}<br>小组赛场均 ${s.gpSettled>0?(s.gpTotal/s.gpSettled).toFixed(1):'-'}分 · 淘汰赛场均 ${s.koSettled>0?(s.koTotal/s.koSettled).toFixed(1):'-'}分` : `${s.perfect}次完美  ${s.settled}场结算 · 场均基础分 ${avgBase.toFixed(1)}<br>预测 ${s.predictTotal||0}分 · X因素 ${s.xTotal||0}分`}</div>
+                </div>
+                ${rankMode==='composite' ? `<div style="text-align:right"><div class="rank-pts sm">${compositeScore.toFixed(2)}</div><div style="font-size:10px;color:#aaa">参与${(participationRate*100).toFixed(0)}%</div></div>` : `<div class="rank-pts${rankMode==='today' && s.todayPerfect>0 ? ' gold' : ''}">${rankMode==='today'?s.today:s.total}分</div>`}
+            </div>`;
+        }).join('')}
+    </div>`;
+}
+
+function switchRankMode(mode) {
+    localStorage.setItem('wc_rank_mode', mode);
+    loadLeaderboard();
+}
+
+// ======== 收官终章战报弹窗（单次收官，覆盖季军赛→决赛→赛后；含倍率表+分享长图）========
+function wcAddDays(dateStr, n) { const d = new Date(dateStr + 'T00:00:00'); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function wcBuildStatsAll() {
+  const todayStr = getTodayStr();
+  const stats = {}; const dailyStats = {};
+  const pmm = {'小组赛':1,'十六分之一决赛':2,'八分之一决赛':3,'四分之一决赛':4,'半决赛':5,'季军赛':6,'决赛':7};
+  allPreds.filter(p => p.userName && p.userName !== 'null').forEach(p => {
+    if (!stats[p.userName]) stats[p.userName] = { total:0, count:0, perfect:0, settled:0, baseTotal:0, baseSettled:0, gpTotal:0, gpSettled:0, koTotal:0, koSettled:0, predictTotal:0, xTotal:0, firstDate:null, days:new Set(), xCount:0, xSeen:new Set(), perfectList:[] };
+    const s = stats[p.userName]; s.count++;
+    const md = MATCH_DATA.find(x => String(x.id) === String(p.matchId));
+    const _pm = matches.find(x => String(x.id) === String(p.matchId));
+    if (_pm && _pm.settledDate && Number(p.homePred) === _pm.homeScore && Number(p.awayPred) === _pm.awayScore) {
+      s.perfect++;
+      if (md && md.bjDate) { const dk = md.bjDate.split(' ')[0]; s.perfectList.push({ id:String(p.matchId), date:dk, home:(md.homeCn||md.home), away:(md.awayCn||md.away), hs:_pm.homeScore, as:_pm.awayScore }); }
+    }
+    if (typeof p.points === 'number' && !isNaN(p.points)) {
+      const xp = (typeof p.xPoints === 'number' && !isNaN(p.xPoints)) ? p.xPoints : 0;
+      s.predictTotal += p.points; s.xTotal += xp; s.total += p.points + xp; s.settled++;
+      const mult = md && md.phase ? (pmm[md.phase] || 1) : 1;
+      const basePts = mult > 0 ? p.points / mult : p.points;
+      s.baseTotal += basePts; s.baseSettled++;
+      if (md && md.phase === '小组赛') { s.gpTotal += p.points; s.gpSettled++; }
+      else if (md && md.phase && md.phase !== '小组赛') { s.koTotal += p.points + xp; s.koSettled++; }
+      if (md && md.bjDate) { const dk = md.bjDate.split(' ')[0]; s.days.add(dk); if (!s.firstDate || dk < s.firstDate) s.firstDate = dk; if (!dailyStats[dk]) dailyStats[dk] = {}; if (!dailyStats[dk][p.userName]) dailyStats[dk][p.userName] = 0; dailyStats[dk][p.userName] += p.points + xp; }
+    }
+    if (_pm && _pm.xFactors && _pm.xFactors.length && !s.xSeen.has(String(p.matchId))) { s.xSeen.add(String(p.matchId)); s.xCount += _pm.xFactors.length; }
+  });
+  allPeeks.forEach(pk => {
+    if (!pk.userName || pk.userName === 'null') return;
+    if (!stats[pk.userName]) stats[pk.userName] = { total:0, count:0, perfect:0, settled:0, baseTotal:0, baseSettled:0, gpTotal:0, gpSettled:0, koTotal:0, koSettled:0, predictTotal:0, xTotal:0, firstDate:null, days:new Set(), xCount:0, perfectList:[] };
+    const s = stats[pk.userName]; const cost = Number(pk.cost) || 0;
+    s.total -= cost; s.predictTotal -= cost;
+    const md = MATCH_DATA.find(x => String(x.id) === String(pk.matchId).replace(/^M/,''));
+    if (md && md.bjDate) { const dk = md.bjDate.split(' ')[0]; if (!dailyStats[dk]) dailyStats[dk] = {}; if (!dailyStats[dk][pk.userName]) dailyStats[dk][pk.userName] = 0; dailyStats[dk][pk.userName] -= cost; }
+  });
+  const dayChampDates = {};
+  Object.entries(dailyStats).forEach(([dk, up]) => {
+    if (dk >= todayStr) return;
+    const mx = Math.max(...Object.values(up));
+    if (mx > 0) Object.entries(up).forEach(([u, pts]) => { if (pts === mx) { if (!dayChampDates[u]) dayChampDates[u] = []; dayChampDates[u].push(dk); } });
+  });
+  return { stats, dailyStats, dayChampDates };
+}
+function wcPartRate(userName, stats) {
+  let firstIdx = Infinity;
+  allPreds.filter(p => p.userName === userName && p.userName !== 'null').forEach(p => { const i = MATCH_DATA.findIndex(x => String(x.id) === String(p.matchId)); if (i >= 0 && i < firstIdx) firstIdx = i; });
+  if (firstIdx === Infinity) return 0;
+  const settledIdx = [];
+  matches.forEach(m => { if (m.settledDate && m.homeScore != null) { const mi = MATCH_DATA.findIndex(x => String(x.id) === String(m.id)); if (mi >= 0) settledIdx.push(mi); } });
+  settledIdx.sort((a, b) => a - b);
+  const totalFromEntry = settledIdx.filter(i => i >= firstIdx).length;
+  const mySettled = stats[userName] ? stats[userName].settled : 0;
+  return totalFromEntry > 0 ? Math.min(mySettled / totalFromEntry, 1) : 0;
+}
+// 逆袭达人：对相邻比赛日，按「当日积分名次」比较，当日名次比上一比赛日提升、且
+// 在全部人员中提升最多者 = 该日「逆袭达人」。某人「逆袭次数」= 其成为单日逆袭达人的天数。
+function wcSeasonComeback() {
+  if (typeof MATCH_DATA === 'undefined') return { byUser:{}, me:null, topRiser:null };
+  function dayRankOf(matchIds) {
+    const mset = new Set(matchIds.map(x => String(x).replace(/^M/,'')));
+    const map = {};
+    allPreds.filter(p => p.userName && p.userName !== 'null' && mset.has(String(p.matchId).replace(/^M/,'')) && typeof p.points === 'number')
+             .forEach(p => { map[p.userName] = (map[p.userName]||0) + (Number(p.points)||0) + (Number(p.xPoints)||0); });
+    const sorted = Object.entries(map).sort((a,b) => b[1]-a[1]);
+    const rk = {}; sorted.forEach(([n],i) => rk[n] = i+1);
+    return rk;
+  }
+  const dayList = [...new Set(MATCH_DATA.filter(m => m.bjDate).map(m => m.bjDate.split(' ')[0]))].sort();
+  const byUser = {};
+  let seasonMax = null;
+  for (let i = 1; i < dayList.length; i++) {
+    const prevDay = dayList[i-1], curDay = dayList[i];
+    const prevR = dayRankOf(MATCH_DATA.filter(m => m.bjDate && m.bjDate.split(' ')[0] === prevDay).map(m => String(m.id)));
+    const curR = dayRankOf(MATCH_DATA.filter(m => m.bjDate && m.bjDate.split(' ')[0] === curDay).map(m => String(m.id)));
+    const users = new Set([...Object.keys(prevR), ...Object.keys(curR)]);
+    let dayTop = null;
+    users.forEach(n => {
+      const pr = prevR[n], cr = curR[n];
+      if (pr == null || cr == null) return;
+      const rise = pr - cr;
+      if (rise > 0 && (!dayTop || rise > dayTop.rise)) dayTop = { name:n, date:curDay, from:pr, to:cr, rise };
+    });
+    if (dayTop) {
+      if (!byUser[dayTop.name]) byUser[dayTop.name] = { count:0, list:[] };
+      byUser[dayTop.name].count++; byUser[dayTop.name].list.push({ date:dayTop.date, from:dayTop.from, to:dayTop.to, rise:dayTop.rise });
+      if (!seasonMax || dayTop.rise > seasonMax.rise) seasonMax = dayTop;
+    }
+  }
+  let topRiser = null;
+  Object.entries(byUser).forEach(([n,v]) => { if (!topRiser || v.count > topRiser.count) topRiser = { name:n, count:v.count }; });
+  const me = localStorage.getItem('wc_nickname');
+  return { byUser, me: (me && byUser[me]) ? byUser[me] : null, topRiser };
+}
+// ====== 收官终章战报：按日期分三态（季军赛/决赛/封笔），每位用户看自己的真实数据 ======
+// mode: 'semi'(季军赛预测日) | 'final'(决赛预测日) | 'end'(决赛后封笔)
+// 日期依据 match_data.js 的 bjDate：M103 季军赛=7/19、M104 决赛=7/20（北京时）
+//   → 季军赛弹框 = M103 前一天（用户称 7/18）  → 决赛弹框 = M104 前一天（7/19）  → 封笔 = M104 当天赛后（7/20）
+function renderUserTrendSVG(series, opts) {
+  const W=360,H=132,padL=38,padR=10,padT=14,padB=22;
+  const n=series.length; if(n===0) return "";
+  const vals=series.map(d=>d.value);
+  let vmin=Math.min.apply(null,vals),vmax=Math.max.apply(null,vals);
+  if(vmin===vmax){vmin-=1;vmax+=1;}
+  const range=vmax-vmin;
+  const x=i=>padL+(n===1?(W-padL-padR)/2:(W-padL-padR)*i/(n-1));
+  const y=v=>{const t=(v-vmin)/range;return padT+(H-padT-padB)*(opts.invertY?t:1-t);};
+  let grid="";
+  for(let g=0;g<=2;g++){const gv=vmin+range*g/2;const gy=y(gv);grid+='<line x1="'+padL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+gy.toFixed(1)+'" stroke="rgba(255,255,255,0.08)" stroke-width="1"/><text x="'+(padL-4)+'" y="'+(gy+3).toFixed(1)+'" text-anchor="end" fill="#9fb0d9" font-size="9">'+(opts.fmt?opts.fmt(gv):gv.toFixed(0))+'</text>';}
+  let path="",pts="";
+  const step=Math.max(1,Math.ceil(n/12));
+  series.forEach((d,i)=>{const px=x(i),py=y(d.value);path+=(i===0?"M":"L")+px.toFixed(1)+" "+py.toFixed(1)+" ";pts+='<circle cx="'+px.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="2.6" fill="'+opts.color+'"/><text x="'+px.toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle" fill="#9fb0d9" font-size="8">'+d.label+'</text>';if(n<=16){pts+='<text x="'+(px+4).toFixed(1)+'" y="'+(py-4).toFixed(1)+'" fill="'+opts.color+'" font-size="8">'+(opts.fmt?opts.fmt(d.value):d.value.toFixed(1))+'</text>';}});
+  return '<svg width="100%" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="display:block;">'+grid+'<path d="'+path+'" fill="none" stroke="'+opts.color+'" stroke-width="2"/>'+pts+'</svg>';
+}
+
+function getFinaleMode() {
+  if (typeof MATCH_DATA === 'undefined') return null;
+  const m103 = MATCH_DATA.find(m => String(m.id) === '103');
+  const m104 = MATCH_DATA.find(m => String(m.id) === '104'); if (!m104) return null;
+  const today = getTodayStr();
+  const dn = s => Number(s.replace(/-/g, ''));
+  const m103day = m103 && m103.bjDate ? m103.bjDate.split(' ')[0] : null;
+  const m104day = m104.bjDate.split(' ')[0];
+  const semiDay = m103day ? wcAddDays(m103day, -1) : null;            // 季军赛预测日（M103 前一天）
+  const finalDay = wcAddDays(m104day, -1);                            // 决赛预测日（M104 前一天）
+  const m104score = (typeof cloudScores !== 'undefined') ? (cloudScores['104'] || cloudScores['M104'] || cloudScores[104]) : null;
+  const m104settled = (m104.settledDate && m104.homeScore != null) || (m104score && m104score.status === 'finished' && m104score.homeScore != null);
+  if (semiDay && dn(today) < dn(semiDay)) return null;                // 未到季军赛窗口，绝不弹
+  if (semiDay && dn(today) === dn(semiDay)) return 'semi';            // 季军赛预测日
+  if (dn(today) === dn(finalDay)) return 'final';                     // 决赛预测日
+  if (dn(today) >= dn(m104day)) return m104settled ? 'end' : 'final';// 决赛日及之后：赛后封笔，未赛先给决赛版
+  return null;
+}
+function showFinaleReport(mode) {
+  const me = localStorage.getItem('wc_nickname'); if (!me) return;
+  if (typeof MATCH_DATA === 'undefined') return;
+  const m103 = MATCH_DATA.find(m => String(m.id) === '103');
+  const m104 = MATCH_DATA.find(m => String(m.id) === '104'); if (!m104) return;
+  const m104score = (typeof cloudScores !== 'undefined') ? (cloudScores['104'] || cloudScores['M104'] || cloudScores[104]) : null;
+  const m104settled = (m104.settledDate && m104.homeScore != null) || (m104score && m104score.status === 'finished' && m104score.homeScore != null);
+  const { stats, dailyStats, dayChampDates } = wcBuildStatsAll();
+  const s = stats[me]; if (!s) return;
+  const avgBase = s.baseSettled > 0 ? s.baseTotal / s.baseSettled : 0;
+  const pr = wcPartRate(me, stats);
+  const totalRank = Object.entries(stats).sort((a, b) => b[1].total - a[1].total).findIndex(([n]) => n === me) + 1;
+  const totalUsers = Object.keys(stats).length;
+  const compRank = Object.entries(stats).map(([n, st]) => { const ar = st.baseSettled > 0 ? st.baseTotal / st.baseSettled : 0; const prr = wcPartRate(n, stats); return [n, ar * (0.5 + 0.5 * prr)]; }).sort((a, b) => b[1] - a[1]).findIndex(([n]) => n === me) + 1;
+  const compMap = Object.entries(stats).map(([n, st]) => { const ar = st.baseSettled > 0 ? st.baseTotal / st.baseSettled : 0; const prr = wcPartRate(n, stats); return [n, ar * (0.5 + 0.5 * prr)]; }).sort((a, b) => b[1] - a[1]);
+  const topComp = compMap[0];
+  const maxPerfect = Math.max(...Object.values(stats).map(st => st.perfect));
+  const validBase = Object.entries(stats).filter(([, st]) => st.baseSettled >= 10);
+  const maxAvgBase = validBase.length ? Math.max(...validBase.map(([, st]) => st.baseTotal / st.baseSettled)) : 0;
+  const xTotals = {};
+  allPreds.forEach(p => { if (typeof p.xPoints === 'number' && !isNaN(p.xPoints)) xTotals[p.userName] = (xTotals[p.userName]||0) + p.xPoints; });
+  const maxXTotal = Object.keys(xTotals).length ? Math.max(...Object.values(xTotals)) : 0;
+  let topX = null;
+  if (maxXTotal > 0) { Object.entries(xTotals).forEach(([n,v]) => { if (!topX || v > topX.total) topX = { name:n, total:v }; }); }
+  const kingTitles = [];
+  if (s.perfect >= 3 && s.perfect === maxPerfect) kingTitles.push('完美王');
+  if (topX && topX.name === me) kingTitles.push('X因素王');
+  if (s.baseSettled >= 10 && validBase.length > 0 && avgBase === maxAvgBase) kingTitles.push('神准王');
+  if (pr >= 1.0 && s.settled >= 10) kingTitles.push('全勤王');
+  const et = evalUserTitle(me);
+  const radarAll = computeStyleRadarAll(); const myRadar = radarAll && radarAll.byUser && radarAll.byUser[me];
+  const dayChamps = (dayChampDates[me] || []).slice().sort();
+  const perfectSorted = s.perfectList.slice().sort((a, b) => a.date < b.date ? -1 : 1);
+  const perfectListHtml = perfectSorted.length ? perfectSorted.map(p => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed rgba(255,215,0,0.18);"><span>${p.date} · M${p.id}</span><span>${p.home} ${p.hs}-${p.as} ${p.away}</span></div>`).join('') : '<div style="font-size:12px;color:#9fb0d9;">暂无完美命中</div>';
+  const cb = wcSeasonComeback();
+  const topScorer = Object.entries(stats).slice().sort((a,b)=>b[1].total-a[1].total)[0];
+  let topPerfect = null;
+  Object.entries(stats).forEach(([n,st])=>{ if(!topPerfect || st.perfect > topPerfect.count) topPerfect = { name:n, count:st.perfect }; });
+  let topChamp = null;
+  Object.entries(dayChampDates).forEach(([n,arr])=>{ if(!topChamp || arr.length > topChamp.count) topChamp = { name:n, count:arr.length }; });
+  const topScorerLine = (topScorer) ? '<div style="font-size:11px;color:#9fb0d9;margin-top:6px;border-top:1px dashed rgba(255,255,255,0.15);padding-top:6px;">🥇 本季积分王：'+topScorer[0]+'（'+topScorer[1].total.toFixed(1)+' 分）</div>' : '';
+  const topPerfectLine = (topPerfect) ? '<div style="font-size:11px;color:#9fb0d9;margin-top:6px;border-top:1px dashed rgba(255,255,255,0.15);padding-top:6px;">⚽ 本季完美王：'+topPerfect.name+'（'+topPerfect.count+' 场）</div>' : '';
+  const topChampLine = (topChamp) ? '<div style="font-size:11px;color:#9fb0d9;margin-top:6px;border-top:1px dashed rgba(255,255,255,0.15);padding-top:6px;">👑 本季单日封王最多：'+topChamp.name+'（'+topChamp.count+' 次）</div>' : '';
+  const topCompLine = (topComp) ? '<div style="font-size:11px;color:#9fb0d9;margin-top:6px;border-top:1px dashed rgba(255,255,255,0.15);padding-top:6px;">🏅 本季准度王：'+topComp[0]+'（综合准度 '+topComp[1].toFixed(2)+'）</div>' : '';
+  const topXLine = (topX) ? '<div style="font-size:11px;color:#9fb0d9;margin-top:6px;border-top:1px dashed rgba(255,255,255,0.15);padding-top:6px;">🎯 本季X因素王：'+topX.name+'（X因素总分 '+topX.total.toFixed(1)+'）</div>' : '';
+  function dayMatchesDetail(dk) {
+    const dayMatches = matches.filter(m => (m.date || '').split(' ')[0] === dk);
+    const rows = [];
+    dayMatches.forEach(m => {
+      const pred = allPreds.find(p => p.userName === me && String(p.matchId).replace(/^M/, '') === String(m.id));
+      const sc = scoreOf(m);
+      const hShow = (m.homeCn || m.home), aShow = (m.awayCn || m.away);
+      const myPredStr = pred ? (Number(pred.homePred) + '-' + Number(pred.awayPred)) : '未填';
+      const myPts = (pred && typeof pred.points === 'number' && !isNaN(pred.points)) ? (Number(pred.points) + (Number(pred.xPoints) || 0)).toFixed(1) : '-';
+      rows.push(`<div style="font-size:11px;color:#cdd6f4;padding:2px 0;border-bottom:1px dashed rgba(255,255,255,0.08);">M${m.id} ${hShow} ${sc.h != null ? sc.h + '-' + sc.a : '-'} ${aShow} · 你 ${myPredStr} → ${myPts}分</div>`);
+    });
+    const dayTotal = (dailyStats[dk] && dailyStats[dk][me] != null) ? dailyStats[dk][me].toFixed(1) : '-';
+    return { dk, rows, dayTotal };
+  }
+  const m = mode || (m104settled ? 'end' : 'final');
+  const isSemi = (m === 'semi');
+  const isEnd = (m === 'end');
+  let bgGrad, borderCol, accentCol, subTxtCol;
+  if (isSemi) { bgGrad = 'linear-gradient(160deg,#0e2e2a,#1c4a44)'; borderCol = 'rgba(126,232,200,0.45)'; accentCol = '#7ee8c8'; subTxtCol = '#bfe9dd'; }
+  else { bgGrad = 'linear-gradient(160deg,#0d1b3e,#1a2a5e)'; borderCol = 'rgba(255,215,0,0.4)'; accentCol = '#ffd700'; subTxtCol = '#cdd6f4'; }
+  const pmm = {'小组赛':1,'十六分之一决赛':2,'八分之一决赛':3,'四分之一决赛':4,'半决赛':5,'季军赛':6,'决赛':7};
+  const myDays = (s.days ? Array.from(s.days) : []).slice().sort();
+  const allUsers = Object.keys(stats);
+  const userCumByDay = {};
+  allUsers.forEach(u => { let c = 0; myDays.forEach(dk => { c += (dailyStats[dk] && dailyStats[dk][u] != null) ? dailyStats[dk][u] : 0; if (!userCumByDay[u]) userCumByDay[u] = {}; userCumByDay[u][dk] = c; }); });
+  const rankSeries = myDays.map((dk, idx) => { const cumMap = {}; allUsers.forEach(u => { cumMap[u] = userCumByDay[u] ? (userCumByDay[u][dk] || 0) : 0; }); const sorted = Object.entries(cumMap).sort((a, b) => b[1] - a[1]); const rk = sorted.findIndex(([u]) => u === me) + 1; return { label: String(idx+1), value: rk }; });
+  const _ubd = {};
+  allPreds.filter(p => p.userName === me && typeof p.points === 'number').forEach(p => { const md = MATCH_DATA.find(x => String(x.id) === String(p.matchId)); if (!md || !md.bjDate) return; const dk = md.bjDate.split(' ')[0]; const mult = md.phase ? (pmm[md.phase] || 1) : 1; const bp = mult > 0 ? p.points / mult : p.points; if (!_ubd[dk]) _ubd[dk] = { b: 0, n: 0 }; _ubd[dk].b += bp; _ubd[dk].n++; });
+  let _rb = 0, _rn = 0;
+  const compSeries = myDays.map((dk, idx) => { if (_ubd[dk]) { _rb += _ubd[dk].b; _rn += _ubd[dk].n; } const ab = _rn > 0 ? _rb / _rn : 0; return { label: String(idx+1), value: ab * (0.5 + 0.5 * pr) }; });
+  const totalTrendHtml = (isEnd && rankSeries.length > 1) ? '<div style="margin:14px 0;padding:12px;border:1px solid '+borderCol+';border-radius:10px;background:rgba(255,215,0,0.06);"><div style="color:'+accentCol+';font-weight:700;margin-bottom:4px;">📈 总积分名次走势（按参与日）</div>'+renderUserTrendSVG(rankSeries, { color: accentCol, invertY: true, fmt: function(v){return '#'+v.toFixed(0);} })+topScorerLine+'</div>' : '';
+  const compTrendHtml = (isEnd && compSeries.length > 1) ? '<div style="margin-top:10px;"><div style="color:'+accentCol+';font-weight:700;margin-bottom:4px;font-size:12px;">📈 综合准度走势（按预测天数）</div>'+renderUserTrendSVG(compSeries, { color: '#7ee8c8', fmt: function(v){return v.toFixed(2);} })+'</div>' : '';
+
+  const multMap = { 'semi': ['季军赛', 6, 18, 24, 30], 'final': ['决赛', 7, 21, 28, 35] };
+  const multRow = multMap[m];
+  const isFinal = m104settled;
+  const titleTxt = isEnd ? '我预测的2026年世界杯全景' : (isSemi ? '🟢 收官预告 · 季军赛即将开打' : '🏆 收官倒计时 · 决赛最后一战');
+  const subTxt = isEnd ? '四年一度的竞猜，在此刻为你封笔。' : (isSemi ? '半决赛与季军赛之间，先看看你的征战厚度。' : '这是本届最后一次预测机会——写下你的最终判断。');
+  const perfectSection = isEnd
+    ? `<div style="margin:14px 0;padding:12px;border:1px solid ${borderCol};border-radius:10px;background:rgba(255,215,0,0.06);"><div style="color:${accentCol};font-weight:700;font-size:16px;margin-bottom:6px;">⚽ 完美命中 ${s.perfect} 场</div>${perfectListHtml}${topPerfectLine}</div>`
+    : `<div style="margin:14px 0;">⚽ 完美命中 <b style="color:${accentCol};">${s.perfect}</b> 场</div>`;
+  let radarText = ''; if (myRadar) radarText = myRadar.topLabel + '（' + myRadar.topScore + '%）';
+  let headerHtml;
+  if (isEnd) {
+    headerHtml = `
+      <div style="text-align:center;margin:6px 0 14px;">
+        <div style="font-size:28px;font-weight:900;color:#fff;line-height:1.15;">${me}</div>
+        <div style="font-size:13px;color:${subTxtCol};margin-top:5px;">「${et.main}」${et.sub ? ' ' + et.sub : ''}</div>
+        <div style="font-size:46px;font-weight:900;color:${accentCol};line-height:1.1;margin-top:10px;">${s.total.toFixed(1)}</div>
+        <div style="font-size:15px;color:#fff;margin-top:4px;">总积分 · 全组第 <b style="color:${accentCol};font-size:19px;">${totalRank}</b> / ${totalUsers} 名</div>
+        ${kingTitles.length ? `<div style="margin-top:8px;font-size:13px;color:${accentCol};">${kingTitles.join(' / ')}</div>` : ''}
+      </div>`;
+  } else {
+    headerHtml = `
+      <div style="text-align:center;margin:6px 0 14px;">
+        <div style="font-size:22px;font-weight:800;">${me}</div>
+        <div style="font-size:13px;color:${accentCol};margin-top:4px;">「${et.main}」 ${et.sub}</div>
+        ${kingTitles.length ? `<div style="margin-top:8px;">${kingTitles.map(t => `<span style="display:inline-block;margin:2px;padding:3px 10px;background:${accentCol};color:#1a2a5e;border-radius:20px;font-size:12px;font-weight:700;">${t}</span>`).join('')}</div>` : ''}
+      </div>`;
+  }
+  const statRowLight = `
+    <div style="display:flex;justify-content:space-around;text-align:center;margin:14px 0;">
+      <div><div style="font-size:20px;font-weight:800;color:${accentCol};">${s.firstDate || '-'}</div><div style="font-size:11px;color:#9fb0d9;">首猜日</div></div>
+      <div><div style="font-size:20px;font-weight:800;color:${accentCol};">${s.days.size}</div><div style="font-size:11px;color:#9fb0d9;">征战天数</div></div>
+      <div><div style="font-size:20px;font-weight:800;color:${accentCol};">${s.count}</div><div style="font-size:11px;color:#9fb0d9;">预测场次</div></div>
+      <div><div style="font-size:20px;font-weight:800;color:${accentCol};">${s.xCount}</div><div style="font-size:11px;color:#9fb0d9;">X题参与</div></div>
+    </div>`;
+  const champRowLight = `
+    <div style="display:flex;justify-content:space-around;text-align:center;margin:14px 0;">
+      <div><div style="font-size:20px;font-weight:800;color:${accentCol};">${dayChamps.length}</div><div style="font-size:11px;color:#9fb0d9;">单日封王</div></div>
+      <div><div style="font-size:20px;font-weight:800;color:${accentCol};">${s.total.toFixed(1)}</div><div style="font-size:11px;color:#9fb0d9;">总积分${isEnd ? '' : '·第' + totalRank + '/' + totalUsers}</div></div>
+      <div><div style="font-size:20px;font-weight:800;color:${accentCol};">${compRank}</div><div style="font-size:11px;color:#9fb0d9;">综合准度名次</div></div>
+    </div>
+    ${dayChamps.length ? `<div style="font-size:12px;color:${subTxtCol};margin-bottom:8px;">封王日：${dayChamps.join('、')}</div>` : ''}`;
+  const multRowHtml = multRow ? `<div style="margin-top:10px;font-size:12px;color:#9fb0d9;">📊 阶段倍率（积分 = 基础分 × 倍率）</div>
+    <table style="width:100%;font-size:11px;border-collapse:collapse;margin-top:6px;text-align:center;color:#cdd6f4;">
+      <tr style="background:rgba(255,215,0,0.1);"><th style="padding:4px;border:1px solid ${borderCol};">阶段</th><th style="padding:4px;border:1px solid ${borderCol};">倍率</th><th style="padding:4px;border:1px solid ${borderCol};">参与</th><th style="padding:4px;border:1px solid ${borderCol};">净胜球</th><th style="padding:4px;border:1px solid ${borderCol};">完美</th></tr>
+      <tr><td style="padding:4px 6px;border:1px solid ${borderCol};">${multRow[0]}</td><td style="padding:4px 6px;border:1px solid ${borderCol};color:${accentCol};font-weight:700;">×${multRow[1]}</td><td style="padding:4px 6px;border:1px solid ${borderCol};">${multRow[2]}</td><td style="padding:4px 6px;border:1px solid ${borderCol};">${multRow[3]}</td><td style="padding:4px 6px;border:1px solid ${borderCol};">${multRow[4]}</td></tr>
+    </table>` : '';
+  const champDetailHtml = `
+    <div style="margin:14px 0;padding:12px;border:1px solid ${borderCol};border-radius:10px;background:rgba(255,215,0,0.06);">
+      <div style="color:${accentCol};font-weight:700;font-size:16px;margin-bottom:6px;">👑 单日封王 · ${dayChamps.length} 次</div>
+      ${dayChamps.length ? dayChamps.map(dk => { const d = dayMatchesDetail(dk); return `<div style="margin:8px 0;padding:8px;background:rgba(0,0,0,0.2);border-radius:8px;">
+          <div style="font-size:13px;color:#fff;font-weight:700;">${d.dk} · 单日总分 <span style="color:${accentCol};">${d.dayTotal}</span></div>
+          <div style="margin-top:4px;">${d.rows.join('')}</div>
+        </div>`; }).join('') : '<div style="font-size:12px;color:#9fb0d9;">本季你暂无单日封王记录</div>'}
+      ${topChampLine}
+    </div>`;
+  const myCbCount = cb.me ? cb.me.count : 0;
+  const myCbList = cb.me ? cb.me.list : [];
+  const comebackHtml2 = `
+    <div style="margin:14px 0;padding:12px;border:1px solid ${borderCol};border-radius:10px;background:rgba(255,215,0,0.06);">
+      <div style="color:${accentCol};font-weight:700;font-size:16px;margin-bottom:6px;">🚀 逆袭达人 · ${myCbCount} 次</div>
+      ${myCbCount ? myCbList.map(c => `<div style="font-size:12px;color:#cdd6f4;padding:2px 0;">${c.date}：第 ${c.from} → 第 ${c.to} 名（反超 +${c.rise} 位）</div>`).join('') : '<div style="font-size:12px;color:#9fb0d9;">本季暂无逆袭（未有单日名次提升居全组之首）</div>'}
+      ${cb.topRiser && (!cb.me || cb.topRiser.name !== me) ? `<div style="font-size:11px;color:#9fb0d9;margin-top:6px;border-top:1px dashed rgba(255,255,255,0.15);padding-top:6px;">本季逆袭之王：${cb.topRiser.name}（${cb.topRiser.count} 次）</div>` : ''}
+    </div>`;
+  const compositeScore = (avgBase * (0.5 + 0.5 * pr));
+  const compositeHtml = `
+    <div style="margin:14px 0;padding:12px;border:1px solid ${borderCol};border-radius:10px;background:rgba(255,215,0,0.06);">
+      <div style="color:${accentCol};font-weight:700;font-size:16px;">🎯 综合准度名次 · 第 ${compRank} 名</div>
+      <div style="font-size:12px;color:#cdd6f4;margin-top:6px;">综合场均得分 <b style="color:${accentCol};font-size:15px;">${compositeScore.toFixed(2)}</b></div>
+      <div style="font-size:11px;color:#9fb0d9;margin-top:2px;">= 场均基础分 ${avgBase.toFixed(2)} × (0.5 + 0.5×参与度 ${(pr * 100).toFixed(0)}%)</div>
+      ${compTrendHtml}
+      ${topCompLine}
+    </div>`;
+  const xCorrectList = [];
+  let xCorrectCount = 0;
+  matches.forEach(mx => {
+    if (!mx.xFactors || !mx.xFactors.length || !mx.xOutcomes) return;
+    const xpred = allPreds.find(p => p.userName === me && String(p.matchId).replace(/^M/, '') === String(mx.id));
+    if (!xpred || !xpred.xChoices) return;
+    mx.xFactors.forEach(xf => {
+      const _ci = mx.xOutcomes[xf.id];
+      const _mi = xpred.xChoices[xf.id];
+      if (_ci == null || _mi == null) return;
+      if (Number(_mi) === Number(_ci)) { xCorrectCount++; xCorrectList.push({ mid: mx.id, q: xf.q, myOpt: (xf.opts && xf.opts[_mi]) || '' }); }
+    });
+  });
+  const xFactorKingHtml = isEnd ? `
+    <div style="margin:14px 0;padding:12px;border:1px solid ${borderCol};border-radius:10px;background:rgba(255,215,0,0.06);">
+      <div style="color:${accentCol};font-weight:700;font-size:16px;margin-bottom:6px;">🎯 X因素战绩</div>
+      <div style="font-size:13px;color:#cdd6f4;">X题参与 <b style="color:${accentCol};">${s.xCount}</b> 题 · 猜对 <b style="color:${accentCol};">${xCorrectCount}</b> 题 · X因素总分 <b style="color:${accentCol};">${(xTotals[me]||0).toFixed(1)}</b> 分</div>
+      <div style="margin-top:8px;">
+        <div style="font-size:12px;color:${accentCol};font-weight:700;margin-bottom:4px;">✅ 猜对的X因素题（${xCorrectCount}）</div>
+        ${xCorrectList.length ? xCorrectList.map(x => `<div style="font-size:11px;color:#cdd6f4;padding:3px 0;border-bottom:1px dashed rgba(255,255,255,0.10);">M${x.mid} · ${x.q}　→　你选「${x.myOpt}」 ✓</div>`).join('') : '<div style="font-size:11px;color:#9fb0d9;">本季暂无猜对X题</div>'}
+      </div>
+      ${topXLine}
+    </div>` : '';
+  const profileRadarHtml = `
+    <div style="margin:14px 0;padding:12px;border:1px solid ${borderCol};border-radius:10px;background:rgba(255,215,0,0.06);">
+      <div style="color:${accentCol};font-weight:700;margin-bottom:4px;">🧬 人物画像</div>
+      <div style="font-size:13px;color:#fff;">「${et.main}」 ${et.sub}</div>
+      <div style="font-size:12px;color:#cdd6f4;margin-top:2px;">预测风格：${radarText || '—'}</div>
+      ${myRadar ? `<div style="background:#fff;border-radius:10px;padding:6px;margin-top:8px;">${renderStyleRadarSVG(myRadar.dims, radarAll.groupAvg)}</div>` : ''}
+    </div>`;
+  const closingHtml = `
+    <div style="text-align:center;margin:22px 0 4px;padding-top:16px;border-top:1px solid rgba(255,215,0,0.22);">
+      <div style="font-size:18px;font-weight:900;color:${accentCol};line-height:1.55;letter-spacing:0.5px;">时光偷走几分年少，无法湮灭眼中的光<br>2026 的夏天，因你而热辣滚烫</div>
+    </div>`;
+  const buttonHtml = `
+    <div style="display:flex;gap:12px;justify-content:center;margin-top:18px;">
+      <button id="finale-close" style="background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:10px;padding:11px 24px;font-size:14px;cursor:pointer;">关闭</button>
+      <button id="finale-share" style="background:linear-gradient(90deg,#ffd700,#ffb300);color:#1a2a5e;border:none;border-radius:10px;padding:11px 24px;font-size:14px;font-weight:700;cursor:pointer;">📸 生成战报长图</button>
+    </div>`;
+  const dismissHtml = isEnd ? '' : `
+    <div style="display:flex;justify-content:center;margin-top:18px;">
+      <button id="finale-close" style="background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:10px;padding:11px 30px;font-size:14px;cursor:pointer;">知道了</button>
+    </div>`;
+  const overlay = document.createElement('div'); overlay.id = 'finale-report';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(5,10,30,0.84);z-index:10000;display:flex;justify-content:center;align-items:flex-start;overflow:auto;';
+  const box = document.createElement('div');
+  box.style.cssText = 'margin:24px auto 40px;max-width:420px;width:92%;background:' + bgGrad + ';border:1px solid ' + borderCol + ';border-radius:18px;padding:22px;color:#fff;box-shadow:0 10px 40px rgba(0,0,0,0.5);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;';
+  box.innerHTML = `
+    <div style="text-align:center;">
+      <div style="font-size:20px;font-weight:800;color:${accentCol};letter-spacing:1px;">${titleTxt}</div>
+      <div style="font-size:13px;color:${subTxtCol};margin-top:6px;">${subTxt}</div>
+    </div>
+    <div style="background:rgba(232,238,248,0.07);border:1px solid rgba(255,255,255,0.10);border-radius:14px;padding:16px 14px;margin-top:14px;">
+      ${headerHtml}
+      ${statRowLight}
+      ${isEnd ? totalTrendHtml : ''}
+      ${isEnd ? compositeHtml : ''}
+      ${perfectSection}
+      ${xFactorKingHtml}
+      ${isEnd ? champDetailHtml : champRowLight}
+      ${isEnd ? comebackHtml2 : ''}
+      ${isEnd ? profileRadarHtml : ''}
+      ${isEnd ? closingHtml : ''}
+      ${!isEnd ? multRowHtml : ''}
+    </div>
+    ${isEnd ? buttonHtml : dismissHtml}
+  `;
+  overlay.appendChild(box); document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  if (isEnd) {
+    const cbText = myCbCount ? ('逆袭 ' + myCbCount + '次，最佳 ' + myCbList[0].date + ' 第' + myCbList[0].from + '→第' + myCbList[0].to + '（+' + myCbList[0].rise + '位）') : '本季暂无显著逆袭';
+    document.getElementById('finale-share').addEventListener('click', function () {
+      function showIt() { if (window.FINALE_B64 && window.FINALE_B64[me]) showFinaleImagePreview('data:image/png;base64,' + window.FINALE_B64[me]); else showToast('战报图加载失败，请稍后重试'); }
+      if (window.FINALE_B64) { showIt(); return; }
+      var s = document.createElement('script');
+      s.src = 'finale/finale_data.js?v=' + APP_VER;
+      s.onload = showIt;
+      s.onerror = function () { showToast('战报图加载失败，请稍后重试'); };
+      document.head.appendChild(s);
+    });
+    document.getElementById('finale-close').addEventListener('click', () => overlay.remove());
+  } else {
+    document.getElementById('finale-close').addEventListener('click', () => overlay.remove());
+  }
+}
+
+function drawFinaleCanvas(d) {
+  const W = 640, H = 820;
+  const titlesTxt = d.kingTitles.length ? d.kingTitles.join(' · ') : '无';
+  const champsTxt = d.dayChamps.length ? d.dayChamps.join('、') : '无';
+  const composite = (d.compositeScore != null ? d.compositeScore : (d.avgBase * (0.5 + 0.5 * d.pr))).toFixed(2);
+  const gb = [];
+  if (d.topScorer && d.topScorer[0] !== d.me) gb.push('本季积分王：' + d.topScorer[0] + '（' + d.topScorer[1].total.toFixed(1) + ' 分）');
+  if (d.topPerfect && d.topPerfect.name !== d.me) gb.push('本季完美王：' + d.topPerfect.name + '（' + d.topPerfect.count + ' 场）');
+  if (d.topChamp && d.topChamp.name !== d.me) gb.push('本季封王最多：' + d.topChamp.name + '（' + d.topChamp.count + ' 次）');
+  if (d.topComp && d.topComp[0] !== d.me) gb.push('本季综合准度最高：' + d.topComp[0] + '（' + d.topComp[1].toFixed(2) + '）');
+  if (d.topX && d.topX.name !== d.me) gb.push('本季X因素王：' + d.topX.name + '（X因素总分 ' + d.topX.total.toFixed(1) + '）');
+  const gbTxt = gb.length ? gb.join('｜') : '（你包揽了全部本季最佳！）';
+  const gbLines = gbTxt.split('｜');
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  const FONT = '-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif';
+  function setF(size, weight, color) { ctx.fillStyle = color; ctx.font = (weight ? weight + ' ' : '') + size + 'px ' + FONT; }
+  function ctext(t, y, size, color, weight) { setF(size, weight, color); ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(t, W/2, y); }
+  function ltext(t, y, size, color, weight) { setF(size, weight, color); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText(t, 40, y); }
+  function hline(y) { ctx.strokeStyle = 'rgba(255,215,0,0.22)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(W-40, y); ctx.stroke(); }
+  function rrect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); }
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0d1b3e'); g.addColorStop(1, '#1a2a5e');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,215,0,0.5)'; ctx.lineWidth = 1.5; rrect(14, 14, W-28, H-28, 16); ctx.stroke();
+  ctx.fillStyle = 'rgba(232,238,248,0.10)'; ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1; rrect(30, 100, W-60, H-130, 14); ctx.fill(); ctx.stroke();
+  ctext('🏆 收官战报', 52, 22, '#ffd700', '800');
+  ctext('2026 世界杯竞猜 · 我的赛季', 78, 12, '#cdd6f4');
+  ctext(d.me, 128, 26, '#ffffff', '800');
+  ctext('「' + d.et.main + '」 ' + d.et.sub, 154, 13, '#ffd700', '700');
+  ctext(titlesTxt, 180, 13, '#ffd700', '700');
+  const stats = [['首猜日', d.s.firstDate || '-'], ['征战天数', d.s.days.size], ['预测场次', d.s.count], ['X题参与', d.s.xCount]];
+  const statX = [120, 253, 386, 520];
+  stats.forEach(function (s, i) { setF(20, '800', '#ffd700'); ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText(s[1], statX[i], 220); setF(12, '', '#cdd6f4'); ctx.fillText(s[0], statX[i], 238); });
+  ctext(d.s.total.toFixed(1), 280, 40, '#ffffff', '900');
+  ctext('总积分 · 全组第 ' + d.totalRank + ' / ' + d.totalUsers + ' 名', 304, 14, '#ffffff');
+  hline(330);
+  ltext('🎯 综合准度名次 · 第 ' + d.compRank + ' 名', 358, 14, '#ffd700', '700');
+  ltext('综合场均得分 ' + composite + ' = 场均基础分 ' + d.avgBase.toFixed(2) + ' × (0.5+0.5×参与度 ' + Math.round(d.pr*100) + '%)', 382, 12, '#cdd6f4');
+  ltext('⚽ 完美命中 ' + d.perfectCount + ' 场　👑 单日封王 ' + d.dayChamps.length + ' 次', 414, 12, '#cdd6f4');
+  if (d.comeback) ltext('🚀 逆袭：' + d.comeback, 442, 12, '#ffd700');
+  hline(470);
+  ltext('🏅 本季群英（组内最佳）', 498, 13, '#ffd700', '700');
+  gbLines.forEach(function (ln, i) { ltext(ln, 520 + i * 22, 12, '#cdd6f4'); });
+  hline(648);
+  ctext('时光偷走几分年少，无法湮灭眼中的光', 684, 17, '#ffd700', '900');
+  ctext('2026 的夏天，因你而热辣滚烫', 712, 17, '#ffd700', '900');
+  ctext('绿城院 · 2026 世界杯预测竞猜', 772, 11, '#9fb0d9');
+  try {
+    var dataUrl = c.toDataURL('image/png');
+    if (dataUrl && dataUrl.length > 200) showFinaleImagePreview(dataUrl);
+    else showToast('生成图片失败，请直接截图保存');
+  } catch (e) {
+    showToast('生成图片失败，请直接截图保存');
+  }
+}
+function wcGenerateFinaleImage(d) {
+  // 后台已按每个用户预生成静态长图 PNG，直接展示同域名图片URL。
+  // 微信会当作网络图片：点击放大进原生查看器，再长按即可保存完整长图。
+  const url = 'finale/' + encodeURIComponent(d.me) + '.png?v=' + APP_VER;
+  const img = new Image();
+  img.onload = function () { showFinaleImagePreview(url); };
+  img.onerror = function () { drawFinaleCanvas(d); };
+  img.src = url;
+}
+function showFinaleImagePreview(src) {
+  // 整页替换为长图（普通文档流，不用 fixed 裁剪层）。
+  // 微信会把它当作文内图片：点击放大进入原生查看器，再长按即可保存【完整】长图。
+  document.body.style.margin = '0';
+  document.body.innerHTML =
+    '<div style="min-height:100vh;background:#000;padding:8px 8px 96px;box-sizing:border-box;">'
+    + '<img id="fim-img" src="' + src + '" style="width:100%;height:auto;display:block;border-radius:8px;"/>'
+    + '<div style="text-align:center;color:#fff;font-size:13px;margin:12px 0;line-height:1.6;">📲 点击上方图片放大，再长按即可保存<b style="color:#ffd700;">完整长图</b></div>'
+    + '</div>'
+    + '<button id="fim-back" style="position:fixed;left:5%;right:5%;bottom:16px;background:#ffd700;color:#1a2a5e;border:none;border-radius:12px;padding:13px;font-size:16px;font-weight:800;box-shadow:0 4px 16px rgba(0,0,0,0.5);">← 返回竞猜</button>';
+  document.getElementById('fim-back').addEventListener('click', function () { location.reload(); });
+  // 桌面端自动下载
+  try { const a = document.createElement('a'); a.download = '我的世界杯竞猜战报.png'; a.href = src; a.click(); } catch (e) {}
+}
+
+// ======== 初始化 ========
+// 淘汰赛通知弹窗 - 每次进入新阶段时提醒
+(function() {
+    // 判断当前所处的淘汰赛阶段
+    const now = new Date();
+    const today = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+    
+    // 迁移旧版localStorage key（32强→十六分之一决赛，16强→八分之一决赛）
+    const keyMigrations = {'wc_phase_notified_32强': 'wc_phase_notified_十六分之一决赛', 'wc_phase_notified_16强': 'wc_phase_notified_八分之一决赛'};
+    for (const [oldKey, newKey] of Object.entries(keyMigrations)) {
+        if (localStorage.getItem(oldKey) && !localStorage.getItem(newKey)) {
+            localStorage.setItem(newKey, localStorage.getItem(oldKey));
+        }
+        localStorage.removeItem(oldKey);
+    }
+
+    // 清理之前版本bug可能误设的远期阶段通知标记（只保留今天/明天范围内的）
+    const tomorrow = new Date(now.getTime() + 86400000);
+    const tomorrowStr = tomorrow.getFullYear() + '-' + String(tomorrow.getMonth()+1).padStart(2,'0') + '-' + String(tomorrow.getDate()).padStart(2,'0');
+    if (typeof MATCH_DATA !== 'undefined') {
+        const allPhases = ['十六分之一决赛', '八分之一决赛', '四分之一决赛', '半决赛'];
+        for (const ph of allPhases) {
+            const key = 'wc_phase_notified_' + ph;
+            if (localStorage.getItem(key)) {
+                const phMatches = MATCH_DATA.filter(m => m.phase === ph);
+                const hasNearby = phMatches.some(m => m.bjDate && m.bjDate.split(' ')[0] >= today && m.bjDate.split(' ')[0] <= tomorrowStr);
+                if (!hasNearby) {
+                    // 该阶段没有今天/明天的比赛，但已被标记为通知过 → bug遗留，清除
+                    localStorage.removeItem(key);
+                }
+            }
+        }
+    }
+
+    // 从 MATCH_DATA 中找到"最近即将开始"的淘汰赛阶段（bjDate在今天或明天范围内）
+    let currentPhase = '';
+    let currentPhaseDate = '';
+    if (typeof MATCH_DATA !== 'undefined') {
+        const knockoutPhases = ['十六分之一决赛', '八分之一决赛', '四分之一决赛', '半决赛'];
+        for (let i = 0; i < knockoutPhases.length; i++) {
+            const phase = knockoutPhases[i];
+            const phaseMatches = MATCH_DATA.filter(m => m.phase === phase);
+            // 只看bjDate在今天或明天范围内的比赛
+            const upcoming = phaseMatches.filter(m => m.bjDate && m.bjDate.split(' ')[0] >= today && m.bjDate.split(' ')[0] <= tomorrowStr);
+            if (upcoming.length > 0) {
+                const key = 'wc_phase_notified_' + phase;
+                if (!localStorage.getItem(key)) {
+                    currentPhase = phase;
+                    currentPhaseDate = upcoming[0].bjDate.split(' ')[0];
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!currentPhase) return; // 没有即将到来(今天/明天)的未通知淘汰赛阶段
+    
+    // 创建弹窗
+    const overlay = document.createElement('div');
+    overlay.id = 'knockout-modal';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;display:flex;justify-content:center;align-items:center;';
+    
+    const box = document.createElement('div');
+    box.style.cssText = 'background:white;border-radius:16px;padding:24px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);';
+    
+    const title = document.createElement('h2');
+    title.style.cssText = 'text-align:center;color:#1e3c72;margin-bottom:8px;';
+    title.textContent = '🏆 ' + currentPhase + '开启！';
+    box.appendChild(title);
+    
+    const subtitle = document.createElement('p');
+    subtitle.style.cssText = 'text-align:center;color:#666;margin-bottom:16px;font-size:14px;';
+    subtitle.textContent = '积分翻倍，刺激加倍！';
+    box.appendChild(subtitle);
+
+    // X因素新玩法提醒（半决赛起阶段）
+    const xfactorPhases = ['半决赛', '季军赛', '决赛'];
+    if (xfactorPhases.includes(currentPhase)) {
+        const xfTip = document.createElement('div');
+        xfTip.style.cssText = 'background:#fff3e0;border:1px solid #ffcc80;color:#e65100;border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.7;margin-bottom:16px;';
+        xfTip.innerHTML = '🎲 <b>新玩法 · X因素附加题</b><br>本阶段每场额外 <b>3 题</b>（2自动+1手动），答对加分 / 答错扣分，独立计入总分、不污染常规积分。<br>· 可跳过任意题（不答不加减）<br>· 已选可再点一次取消<br>· 与比分同步锁定（开赛前1分钟），共用3次修改额度';
+        box.appendChild(xfTip);
+    }
+    
+    const table = document.createElement('table');
+    table.style.cssText = 'width:100%;font-size:12px;border-collapse:collapse;text-align:center;margin-bottom:20px;';
+    table.innerHTML = '<tr style="background:#f5f5f5;"><th style="padding:6px;border:1px solid #ddd;">阶段</th><th style="padding:6px;border:1px solid #ddd;">参与</th><th style="padding:6px;border:1px solid #ddd;">方向对</th><th style="padding:6px;border:1px solid #ddd;">净胜球</th><th style="padding:6px;border:1px solid #ddd;">完美</th></tr><tr><td style="padding:6px;border:1px solid #ddd;">小组赛</td><td style="padding:6px;border:1px solid #ddd;">1</td><td style="padding:6px;border:1px solid #ddd;">3</td><td style="padding:6px;border:1px solid #ddd;">4</td><td style="padding:6px;border:1px solid #ddd;">5</td></tr><tr><td style="padding:6px;border:1px solid #ddd;">十六分之一决赛</td><td style="padding:6px;border:1px solid #ddd;">2</td><td style="padding:6px;border:1px solid #ddd;">6</td><td style="padding:6px;border:1px solid #ddd;">8</td><td style="padding:6px;border:1px solid #ddd;">10</td></tr><tr><td style="padding:6px;border:1px solid #ddd;">八分之一决赛</td><td style="padding:6px;border:1px solid #ddd;">3</td><td style="padding:6px;border:1px solid #ddd;">9</td><td style="padding:6px;border:1px solid #ddd;">12</td><td style="padding:6px;border:1px solid #ddd;">15</td></tr><tr><td style="padding:6px;border:1px solid #ddd;">四分之一决赛</td><td style="padding:6px;border:1px solid #ddd;">4</td><td style="padding:6px;border:1px solid #ddd;">12</td><td style="padding:6px;border:1px solid #ddd;">16</td><td style="padding:6px;border:1px solid #ddd;">20</td></tr><tr><td style="padding:6px;border:1px solid #ddd;">半决赛</td><td style="padding:6px;border:1px solid #ddd;">5</td><td style="padding:6px;border:1px solid #ddd;">15</td><td style="padding:6px;border:1px solid #ddd;">20</td><td style="padding:6px;border:1px solid #ddd;">25</td></tr><tr><td style="padding:6px;border:1px solid #ddd;">季军赛</td><td style="padding:6px;border:1px solid #ddd;">6</td><td style="padding:6px;border:1px solid #ddd;">18</td><td style="padding:6px;border:1px solid #ddd;">24</td><td style="padding:6px;border:1px solid #ddd;">30</td></tr><tr><td style="padding:6px;border:1px solid #ddd;">决赛</td><td style="padding:6px;border:1px solid #ddd;">7</td><td style="padding:6px;border:1px solid #ddd;">21</td><td style="padding:6px;border:1px solid #ddd;">28</td><td style="padding:6px;border:1px solid #ddd;">35</td></tr>';
+    box.appendChild(table);
+    
+    const btn = document.createElement('button');
+    btn.textContent = '我知道了';
+    btn.style.cssText = 'background:#1e3c72;color:white;padding:10px 32px;border:none;border-radius:8px;font-size:15px;cursor:pointer;display:block;margin:0 auto;';
+    btn.addEventListener('click', function() {
+        overlay.remove();
+        localStorage.setItem('wc_phase_notified_' + currentPhase, '1');
+    });
+    box.appendChild(btn);
+    
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+})();
+
+checkLogin();
+
+</script>
+<script>
+(function(){
+  function showRuleModalIfNeeded(){
+    var KEY = 'ruleNotice_2026-07-10';
+    try { if (localStorage.getItem(KEY)) return; } catch(e){ return; }
+    var ov = document.getElementById('rule-modal-overlay');
+    if (ov) ov.style.display = 'flex';
+  }
+  window.closeRuleModal = function(){
+    var ov = document.getElementById('rule-modal-overlay');
+    if (ov) ov.style.display = 'none';
+    try { localStorage.setItem('ruleNotice_2026-07-10', '1'); } catch(e){}
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', showRuleModalIfNeeded);
+  } else {
+    showRuleModalIfNeeded();
+  }
+})();
+</script>
+</body>
+</html>

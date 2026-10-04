@@ -1,0 +1,18 @@
+# ===== 运行产物 / 个人数据（绝不入库） =====
+node_modules/
+*.log
+*.pid
+pred_highmark.json
+score-poller.pid
+
+# 真实预测快照（由 gen_data_snapshot.js 生成，含用户数据，已脱敏剔除）
+app/data.js
+
+# 本地配置（含密钥/ID，已脱敏剔除）
+app/config.js
+.env
+
+# ===== OS / 编辑器 =====
+.DS_Store
+Thumbs.db
+*.swp

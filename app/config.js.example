@@ -1,0 +1,10 @@
+// 复制本文件为 config.js（config.js 已在 .gitignore 中，不会入库），填入你自己的配置。
+// 前端 app/index.html 会在 <head> 中加载本文件，提供 window.CONFIG。
+window.CONFIG = {
+  // 你的 npoint.io 文档 ID（在 npoint.io 新建一个 JSON 文档后获得）
+  npointId: 'REPLACE_WITH_NPOINT_ID',
+
+  // 可选：微信分发地址（仅在你自己做微信内部分发时需要）
+  wxUrlA: 'REPLACE_WITH_WX_URL_A',
+  wxUrlB: 'REPLACE_WITH_WX_URL_B'
+};
